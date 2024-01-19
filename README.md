@@ -5,4 +5,4 @@ Will also be configurable with gaze awareness (somehow).
 ### Running the application
 
 * Run `npm install` to install dependencies.
-* Run `npm start` to start running the local server at https://localhost:5173/
+* Run `npm start` to start running the local server at http://localhost:5173/

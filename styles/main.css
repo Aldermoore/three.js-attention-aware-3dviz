@@ -1,7 +1,7 @@
 body {
   /* remove margins and scroll bars */
   margin: 0;
-  overflow: hidden;
+  /* overflow: hidden; */ 
 
   /* style text */
   text-align: center;
@@ -33,3 +33,36 @@ h1 {
   */
   background-color: skyblue;
 }
+
+/*
+  Styling below is just to show that it works, and should be removed! 
+*/
+.yellowmessage {
+  position: fixed;
+  top: 50px; 
+  left: 10vw;  
+  color: darkgoldenrod;
+  z-index: 1;
+}
+.tealmessage {
+  position: fixed;
+  top: 50px; 
+  left: 30vw;  
+  color: teal;
+  z-index: 1;
+}
+.frustummessage {
+  position: fixed;
+  top: 50px; 
+  left: 50vw;  
+  color: hotpink;
+  z-index: 1;
+}
+.hovermessage {
+  position: fixed;
+  top: 50px; 
+  right: 10vw;  
+  color: greenyellow;
+  z-index: 1;
+}
+/***/ 

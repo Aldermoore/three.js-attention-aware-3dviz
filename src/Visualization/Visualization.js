@@ -29,6 +29,19 @@ var mousePick = new THREE.Vector2();
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 
+const width = window.innerWidth;
+const height = window.innerHeight;
+
+
+
+// These are for showing that i works and should be removed as some point. 
+var yellowmessage;
+var tealmessage;
+var hovermessage;
+var frustummessage;
+
+
+
 class Visualization {
   constructor(container) {
     camera = createCamera();
@@ -36,13 +49,28 @@ class Visualization {
     scene = createScene();
     loop = new Loop(camera, scene, renderer);
     container.append(renderer.domElement);
+    window.addEventListener('mousemove', this.onMouseMove, false);
+
 
     dataPoints = new THREE.Group();
     pickingPoints = new THREE.Group();
-    pickingScene = new THREE.Scene();
     matrix = new THREE.Matrix4();
     quaternion = new THREE.Quaternion();
     color = new THREE.Color();
+    // add buffer geometry to picking scene
+    pickingScene = new THREE.Scene();
+    pickingTextureHover = new THREE.WebGLRenderTarget(1, 1);
+    pickingTextureOcclusion = new THREE.WebGLRenderTarget(width, height); //, { format: THREE.RGBAFormat }); // window.innerWidth, window.innerHeight
+    pickingMaterial = new THREE.MeshBasicMaterial({
+      vertexColors: true
+    });
+
+
+    // These are for showing that i works and should be removed as some point. 
+    yellowmessage = document.getElementById('yellowmessage');
+    tealmessage = document.getElementById('tealmessage');
+    hovermessage = document.getElementById('hovermessage');
+    frustummessage = document.getElementById('frustummessage');
 
     // const cube = createCube();
     const controls = createControls(camera, renderer.domElement);
@@ -52,7 +80,7 @@ class Visualization {
 
     scene.add(ambientLight, mainLight);
 
-    this.init();
+    // this.init();
 
     // scene.add(cube);
     const resizer = new Resizer(container, camera, renderer);
@@ -75,7 +103,9 @@ class Visualization {
 
       const element = iris[index];
 
-      this.createSphere(index + 1, 255 * (2*index + 1), new THREE.Vector3(element.sepalLength * 10-40, element.sepalWidth * 10-20, element.petalWidth * 10), 0.5);
+      // TODO: Nice way to bind data-dimensions to scene dimensions (X,Y,Z), and to mark-attributes (size, height/width/thickness, colour, orientation) depending on the type of mark. 
+      // TODO: Normalise input data to a desired, configurable size of the visualization. 
+      this.createSphere(index + 1, 255 * (2 * index + 1), new THREE.Vector3(element.sepalLength * 10 - 40, element.sepalWidth * 10 - 20, element.petalWidth * 10), 0.5);
 
     }
   }
@@ -86,11 +116,36 @@ class Visualization {
   }
 
   start() {
-    loop.start();
+    this.init();
+    this.render();
+    // loop.start();
+    this.animate();
   }
 
   stop() {
     loop.stop();
+  }
+
+  animate() {
+    renderer.setAnimationLoop(() => {
+      this.render();
+      this.isHoveringBuffer();
+      this.checkForOcclusion();
+      this.checkFrustum();
+
+      let notOccluded = dataPoints.children.filter((objects => objects.isOccluded === true));
+
+      yellowmessage.innerHTML = "No. occlusions: " + notOccluded.length;
+      let occludedMsg = "Occluded:";
+      notOccluded.forEach((element => occludedMsg += " " + element.name));
+      tealmessage.innerHTML = occludedMsg;
+
+      let objNotInFrustum = dataPoints.children.filter((objects => objects.inFrustum === false));
+      let frustumMsg = "Not in frustum:";
+      objNotInFrustum.forEach((element => frustumMsg += " " + element.name));
+      tealmessage.innerHTML = occludedMsg;
+      frustummessage.innerHTML = frustumMsg;
+    });
   }
 
   /**
@@ -120,9 +175,9 @@ class Visualization {
     var pixelBuffer = new Uint8Array(width * height * 4);
     renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, width, height, pixelBuffer);
     renderer.setRenderTarget(null);
-    var hexBuffer = rgbaToHex(pixelBuffer);
+    var hexBuffer = this.rgbaToHex(pixelBuffer);
 
-    dataGroup.children.forEach(element => {
+    dataPoints.children.forEach(element => {
       if (hexBuffer.includes(element.name)) {
         element.isOccluded = false;
       } else element.isOccluded = true;
@@ -138,7 +193,11 @@ class Visualization {
     renderer.readRenderTargetPixels(pickingTextureHover, 0, 0, 1, 1, pixelBuffer);
     var id = (pixelBuffer[0] << 16) | (pixelBuffer[1] << 8) | (pixelBuffer[2]);
     renderer.setRenderTarget(null);
-    return id;
+    // This if statement is just test code and should be removed
+    if (id != null) {
+      hovermessage.innerHTML = "hovering over object of ID: " + id;
+    }
+    // return id;
   }
 
   isHoveringRaycaster(object) {
@@ -182,7 +241,7 @@ class Visualization {
   checkFrustum() {
     var frustum = new THREE.Frustum();
     frustum.setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
-    dataGroup.children.forEach(element => {
+    dataPoints.children.forEach(element => {
       if (frustum.intersectsObject(element)) {
         element.inFrustum = true;
       } else element.inFrustum = false;

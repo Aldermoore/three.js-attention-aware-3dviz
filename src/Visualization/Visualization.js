@@ -9,12 +9,14 @@ import { Resizer } from './systems/Resizer.js';
 import { Loop } from './systems/Loop.js';
 import { createControls } from './systems/controls.js'
 import iris from './data/iris.json' assert {type: 'json'}; //Our data
+import { ViewHelper } from './components/viewHelper.js';
 
 
 let camera;
 let renderer;
 let scene;
 let loop;
+let viewHelper;
 
 let dataPoints;
 let pickingPoints;
@@ -75,7 +77,7 @@ class Visualization {
     // const cube = createCube();
     const controls = createControls(camera, renderer.domElement);
     const { ambientLight, mainLight } = createLights();
-
+    viewHelper = new ViewHelper(camera, container, controls);
     // loop.updatables.push(cube);
 
     scene.add(ambientLight, mainLight);
@@ -112,7 +114,11 @@ class Visualization {
 
   render() {
     // draw a single frame
+    renderer.setViewport( 0, 0, renderer.domElement?.offsetWidth, renderer.domElement?.offsetHeight );
     renderer.render(scene, camera);
+    renderer.autoClear = false;
+    viewHelper.render(renderer);
+    renderer.autoClear = true;
   }
 
   start() {
@@ -304,3 +310,4 @@ class Visualization {
 }
 
 export { Visualization };
+

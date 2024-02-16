@@ -36,10 +36,15 @@ var mouse = new THREE.Vector2();
 
 const width = window.innerWidth;
 const height = window.innerHeight;
-const areaPickSize = 50;
+const areaPickSize = 201; //should be an odd number!!
+const centerRow = Math.floor((areaPickSize) / 2);
+const centerColumn = Math.floor((areaPickSize) / 2);
 
 const colorScale = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB'];  // Blue, red, green, yellow, cyan, purple, grey. See https://personal.sron.nl/~pault/#sec:qualitative 
 var attentionList;
+
+
+let experimentStarted = false;
 
 
 
@@ -70,7 +75,7 @@ class Visualization {
     // add buffer geometry to picking scene
     pickingScene = new THREE.Scene();
     pickingTextureHover = new THREE.WebGLRenderTarget(1, 1);
-    pickingTextureAreaHover = new THREE.WebGLRenderTarget(50, 50);
+    pickingTextureAreaHover = new THREE.WebGLRenderTarget(areaPickSize, areaPickSize);
     pickingTextureOcclusion = new THREE.WebGLRenderTarget(width, height); //, { format: THREE.RGBAFormat }); // window.innerWidth, window.innerHeight
     pickingMaterial = new THREE.MeshBasicMaterial({
       vertexColors: true
@@ -173,9 +178,13 @@ class Visualization {
       // This version separates knowledge of the data obejct fro mteh visualisation. 
       // this.createSphere(index + 1, color, new THREE.Vector3(Object.values(element)[0] * 10 - 40, Object.values(element)[1] * 10 - 20, Object.values(element)[3] * 10), 0.5);
     }
-    this.showLevelsOfAttentionOnAllPoints();
+    // this.showLevelsOfAttentionOnAllPoints();
     // let nums = 123; 
     //console.log(assignColor('#e4ff7a','#fc7f00',0,3000,nums));
+    // setInterval(() => {
+    //   this.resetAttentionToAllPoints();
+    //   this.showLevelsOfAttentionOnAllPoints();
+    // }, 5000);
   }
 
   render() {
@@ -221,11 +230,12 @@ class Visualization {
       tealmessage.innerHTML = occludedMsg;
       frustummessage.innerHTML = frustumMsg;
 
-
-      for (let i = 0; i < hoverIDs.length; i++) {
-        if (hoverIDs[i] > 0) {
-          this.increaseAttentionToPoint(hoverIDs[i]);
-          this.updateAttentionColor(hoverIDs[i]);
+      if (experimentStarted) {
+        for (let i = 0; i < hoverIDs.length; i++) {
+          if (hoverIDs[i] > 0) {
+            this.increaseAttentionToPoint(hoverIDs[i]);
+            // this.updateAttentionColor(hoverIDs[i]);
+          }
         }
       }
       hovermessage.innerHTML = "hovering over object of ID: " + hoverIDs;
@@ -249,8 +259,9 @@ class Visualization {
   createSphere(id, markColor, position, size) {
     let geometry = new THREE.SphereGeometry(size, 12, 8);
     let material = new THREE.MeshPhongMaterial({ color: markColor, flatShading: true, userData: { oldColor: markColor } });
-
+    material.userData.originalColor = markColor; 
     let sphere = new THREE.Mesh(geometry, material);
+    
     sphere.name = id;
     sphere.position.set(position.x, position.y, position.z);
 
@@ -286,54 +297,50 @@ class Visualization {
     renderer.readRenderTargetPixels(pickingTextureHover, 0, 0, 1, 1, pixelBuffer);
     var id = (pixelBuffer[0] << 16) | (pixelBuffer[1] << 8) | (pixelBuffer[2]);
     renderer.setRenderTarget(null);
-    // This if statement is just test code and should be removed
-    //if (id != null) {
-    //  hovermessage.innerHTML = "hovering over object of ID: " + id;
-    // }
     if (id != null) {
       return id;
     } else return 0;
   }
 
   isHoveringAreaBuffer() {
-    camera.setViewOffset(renderer.domElement.width, renderer.domElement.height, mousePick.x * window.devicePixelRatio - 25 | 0, mousePick.y * window.devicePixelRatio - 25 | 0, 50, 50);
+    camera.setViewOffset(renderer.domElement.width, renderer.domElement.height, mousePick.x * window.devicePixelRatio - (areaPickSize / 2) | 0, mousePick.y * window.devicePixelRatio - (areaPickSize / 2) | 0, areaPickSize, areaPickSize);
     renderer.setRenderTarget(pickingTextureAreaHover);
     renderer.render(pickingScene, camera);
     camera.clearViewOffset();
-    var pixelBuffer = new Uint8Array(50 * 50 * 4);
-    renderer.readRenderTargetPixels(pickingTextureAreaHover, 0, 0, 50, 50, pixelBuffer);
-
+    var pixelBuffer = new Uint8Array(areaPickSize * areaPickSize * 4);
+    renderer.readRenderTargetPixels(pickingTextureAreaHover, 0, 0, areaPickSize, areaPickSize, pixelBuffer);
     var hexBuffer = this.rgbaToHex(pixelBuffer);
-    // var id = (pixelBuffer[0] << 16) | (pixelBuffer[1] << 8) | (pixelBuffer[2]);
     renderer.setRenderTarget(null);
-    // This if statement is just test code and should be removed
-    //if (id != null) {
-    //  hovermessage.innerHTML = "hovering over object of ID: " + id;
-    // }
-    let allZero = true;
     let IDs = [0];
     let j = 0;
+    // for calculating the circular cutout of the buffer
+    let row = 0;
+    let column = 0;
+    let radius = areaPickSize / 2;
+    let radiusSquared = radius * radius;
     for (let i = 0; i < hexBuffer.length; i++) {
       if (hexBuffer[i] !== 0) {
-        allZero = false;
         if (!IDs.includes(hexBuffer[i])) {
-          IDs[j] = hexBuffer[i];
-          j++;
+          if (this.isInsideCirle(row, column, centerRow, centerColumn, radiusSquared)) {
+            IDs[j] = hexBuffer[i];
+            j++;
+          }
         }
-        // break;
+      }
+      column++;
+      if (column >= areaPickSize) {
+        column = 0;
+        row++;
       }
     }
-    if (!allZero) {
-      console.log(IDs);
-    }
-
     return IDs;
+  }
 
-    /*
-    if (id != null) {
-      return id;
-    } else return 0;
-    */
+  isInsideCirle(row, column, centerRow, centerColumn, radiusSquared) {
+    let dx = centerRow - row;
+    let dy = centerColumn - column;
+    let distance = dx * dx + dy * dy;
+    return distance <= radiusSquared
   }
 
   isHoveringRaycaster(object) {
@@ -522,6 +529,13 @@ class Visualization {
   increaseAttentionToPoint(objectID) {
     if (objectID != 0) {
       iris[objectID - 1].attention++;
+      console.log(iris[objectID - 1].id, iris[objectID - 1].attention)
+    }
+  }
+
+  resetAttentionToAllPoints() {
+    for (const element of dataPoints.children) {
+      iris[element.name - 1].attention = 0;
     }
   }
 
@@ -529,20 +543,29 @@ class Visualization {
 
   showLevelsOfAttentionOnAllPoints() {
     let baseColor = new THREE.Color("#888888"); // #666666
-    iris.sort(compareAttention);
-    let maxAttention = iris[iris.length - 1];
-    iris.sort(compareID);
+
     for (const element of dataPoints.children) {
       element.material.color = baseColor;
     }
+    let maxAttention = 0;
+    for (let index = 0; index < iris.length; index++) {
+      // if(iris[index].attention > maxAttention) maxAttention = iris[index].attention; 
+      maxAttention = iris[index].attention > maxAttention ? iris[index].attention : maxAttention;
+      console.log("attention", maxAttention);
+    }
+    console.log(maxAttention)
+    return maxAttention;
   }
 
-  updateAttentionColor(objectID, attention) {
+  updateAttentionColor(objectID, maxAttention) {
     console.log("recolouring");
     for (const element of dataPoints.children) {
       if (element.name == objectID) {
-        let newColor = assignColor('#ffff00', '#ff0000', 0, 30, iris[objectID - 1].attention); //  #e4ff7a
-        this.recolorPoint(element, newColor);
+        let attentionOnPoint = iris[objectID - 1].attention;
+        if (attentionOnPoint != 0) {
+          let newColor = assignColor('#ffff00', '#ff0000', 0, maxAttention, attentionOnPoint); // colour taken from here: https://github.com/wistia/heatmap-palette
+          this.recolorPoint(element, newColor);
+        }
       }
     }
   }
@@ -551,7 +574,30 @@ class Visualization {
     let color = new THREE.Color(colorHex);
     element.material.color = color;
   }
+
+  startExperiment() {
+    this.resetAttentionToAllPoints();
+    experimentStarted = true;
+  }
+
+  stopExperiment() {
+    experimentStarted = false;
+  }
+
+  showExperimentResults() {
+    let maxAttention = this.showLevelsOfAttentionOnAllPoints();
+    for (const element of dataPoints.children) {
+      this.updateAttentionColor(element.name, maxAttention);
+    }
+  }
+  resetColorsOnAllPoints() {
+    for (const element of dataPoints.children) {
+      this.recolorPoint(element, element.material.userData.originalColor);
+    }
+  }
 }
+
+
 
 function assignColor(minCol, maxCol, minVal, maxVal, val) {
   if (val > maxVal) {

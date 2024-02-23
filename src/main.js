@@ -62,15 +62,12 @@ function main() {
 }
 main();
 
-
+/*
 document.getElementById('settingsToggle').addEventListener('click', showSettings); // add an event listener to the button
 document.getElementById('startExperiment').addEventListener('click', startExperiment); // add an event listener to the button
 document.getElementById('stopExperiment').addEventListener('click', stopExperiment); // add an event listener to the button
 document.getElementById('showExperimentResults').addEventListener('click', showExperimentResults); // add an event listener to the button
 document.getElementById('reset').addEventListener('click', resetColors); // add an event listener to the button
-
-
-
 
 function showSettings() {
   let setCon = document.getElementById('settingsContainer');
@@ -112,3 +109,4 @@ function resetColors() {
     console.log("Colors are reset");
   }
 }
+*/

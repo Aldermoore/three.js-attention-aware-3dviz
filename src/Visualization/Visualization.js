@@ -14,6 +14,8 @@ import { ViewHelper } from './components/viewHelper.js';
 // THREEjs libraries 
 import TWEEN from '@tweenjs/tween.js'
 
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
 
 let camera;
 let renderer;
@@ -36,15 +38,21 @@ var mouse = new THREE.Vector2();
 
 const width = window.innerWidth;
 const height = window.innerHeight;
-const areaPickSize = 201; //should be an odd number!!
-const centerRow = Math.floor((areaPickSize) / 2);
-const centerColumn = Math.floor((areaPickSize) / 2);
 
-const colorScale = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB'];  // Blue, red, green, yellow, cyan, purple, grey. See https://personal.sron.nl/~pault/#sec:qualitative 
+var maxAttention = 0; 
+
+
+
+
+
+
+const colorScale = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB'];  
+// Blue, red, green, yellow, cyan, purple, grey. See https://personal.sron.nl/~pault/#sec:qualitative 
 var attentionList;
 
 
 let experimentStarted = false;
+var liveUpdate = false; 
 
 
 
@@ -57,6 +65,30 @@ var frustummessage;
 
 
 class Visualization {
+
+
+  params = {
+    x: 0,
+    y: 0,
+    z: 0,
+    areaPickSize: 101, //should be an odd number!!
+    // Start: function () {
+    //   this.startExperiment();
+    // },
+    // Stop: function () {
+    //   this.stopExperiment();
+    // },
+    // Show_Results: function () {
+    //   this.showExperimentResults();
+    // },
+    // Reset: function () {
+    //   this.resetColorsOnAllPoints();
+    // }
+  };
+
+  centerRow = Math.floor((this.params.areaPickSize) / 2);
+  centerColumn = Math.floor((this.params.areaPickSize) / 2);
+
   constructor(container) {
     camera = createCamera();
     // camera = createOrthograpichCamera(width, height);
@@ -65,6 +97,8 @@ class Visualization {
     loop = new Loop(camera, scene, renderer);
     container.append(renderer.domElement);
     window.addEventListener('mousemove', this.onMouseMove, false);
+
+    this.calculatePickingArea(); 
 
 
     dataPoints = new THREE.Group();
@@ -75,7 +109,7 @@ class Visualization {
     // add buffer geometry to picking scene
     pickingScene = new THREE.Scene();
     pickingTextureHover = new THREE.WebGLRenderTarget(1, 1);
-    pickingTextureAreaHover = new THREE.WebGLRenderTarget(areaPickSize, areaPickSize);
+    pickingTextureAreaHover = new THREE.WebGLRenderTarget(this.params.areaPickSize, this.params.areaPickSize);
     pickingTextureOcclusion = new THREE.WebGLRenderTarget(width, height); //, { format: THREE.RGBAFormat }); // window.innerWidth, window.innerHeight
     pickingMaterial = new THREE.MeshBasicMaterial({
       vertexColors: true
@@ -103,15 +137,16 @@ class Visualization {
     resizer.onResize = () => {
       this.render(); // Technically not needed if we just constantly rerender each frame. 
     }
+
+
+
+
   }
 
+  /**
+   * initialise the visualisation environment
+   */
   init() {
-    // for (let index = 1; index <= 100; index++) {
-    //   this.createSphere(index, 16776960 + index, new THREE.Vector3(Math.random() * 100 - 50, Math.random() * 100 - 50, Math.random() * 100 - 50));
-    // }
-    // axes
-    // scene.add(new THREE.AxesHelper(50));
-
     scene.add(dataPoints);
     pickingScene.add(pickingPoints);
 
@@ -216,6 +251,7 @@ class Visualization {
       this.checkFrustum();
       let hoverID = this.isHoveringBuffer();
       let hoverIDs = this.isHoveringAreaBuffer();
+      //this.hoveringRaycaster();
 
       let notOccluded = dataPoints.children.filter((objects => objects.isOccluded === true));
 
@@ -238,6 +274,12 @@ class Visualization {
           }
         }
       }
+
+      if(liveUpdate) {
+        iris.forEach(element => {
+          this.updateAttentionColor(element.id, maxAttention);
+        });
+      }
       hovermessage.innerHTML = "hovering over object of ID: " + hoverIDs;
       /*
       if (hoverID > 0) {
@@ -259,9 +301,9 @@ class Visualization {
   createSphere(id, markColor, position, size) {
     let geometry = new THREE.SphereGeometry(size, 12, 8);
     let material = new THREE.MeshPhongMaterial({ color: markColor, flatShading: true, userData: { oldColor: markColor } });
-    material.userData.originalColor = markColor; 
+    material.userData.originalColor = markColor;
     let sphere = new THREE.Mesh(geometry, material);
-    
+
     sphere.name = id;
     sphere.position.set(position.x, position.y, position.z);
 
@@ -270,6 +312,7 @@ class Visualization {
     pickingMesh.name = id;
     dataPoints.add(sphere);
     pickingPoints.add(pickingMesh);
+    //sphere.geometry.toNonIndexed();
     return { sphere, pickingMesh };
   }
 
@@ -303,12 +346,17 @@ class Visualization {
   }
 
   isHoveringAreaBuffer() {
-    camera.setViewOffset(renderer.domElement.width, renderer.domElement.height, mousePick.x * window.devicePixelRatio - (areaPickSize / 2) | 0, mousePick.y * window.devicePixelRatio - (areaPickSize / 2) | 0, areaPickSize, areaPickSize);
+    camera.setViewOffset( renderer.domElement.width, 
+                          renderer.domElement.height, 
+                          mousePick.x * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
+                          mousePick.y * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
+                          this.params.areaPickSize, 
+                          this.params.areaPickSize );
     renderer.setRenderTarget(pickingTextureAreaHover);
     renderer.render(pickingScene, camera);
     camera.clearViewOffset();
-    var pixelBuffer = new Uint8Array(areaPickSize * areaPickSize * 4);
-    renderer.readRenderTargetPixels(pickingTextureAreaHover, 0, 0, areaPickSize, areaPickSize, pixelBuffer);
+    var pixelBuffer = new Uint8Array(this.params.areaPickSize * this.params.areaPickSize * 4);
+    renderer.readRenderTargetPixels(pickingTextureAreaHover, 0, 0, this.params.areaPickSize, this.params.areaPickSize, pixelBuffer);
     var hexBuffer = this.rgbaToHex(pixelBuffer);
     renderer.setRenderTarget(null);
     let IDs = [0];
@@ -316,19 +364,19 @@ class Visualization {
     // for calculating the circular cutout of the buffer
     let row = 0;
     let column = 0;
-    let radius = areaPickSize / 2;
+    let radius = this.params.areaPickSize / 2;
     let radiusSquared = radius * radius;
     for (let i = 0; i < hexBuffer.length; i++) {
       if (hexBuffer[i] !== 0) {
         if (!IDs.includes(hexBuffer[i])) {
-          if (this.isInsideCirle(row, column, centerRow, centerColumn, radiusSquared)) {
+          if (this.isInsideCirle(row, column, this.centerRow, this.centerColumn, radiusSquared)) {
             IDs[j] = hexBuffer[i];
             j++;
           }
         }
       }
       column++;
-      if (column >= areaPickSize) {
+      if (column >= this.params.areaPickSize) {
         column = 0;
         row++;
       }
@@ -357,6 +405,11 @@ class Visualization {
   hoveringRaycaster() {
     raycaster.setFromCamera(mouse, camera);
     var intersects = raycaster.intersectObjects(scene.children);
+    // if (intersects[0]) {
+    //   console.log(intersects[0]);
+    //   intersects[0].object.geometry.computeVertexNormals();
+    //   console.log(intersects[0].object.geometry.getAttribute("normal"));
+    // }
     return intersects[0];
   }
 
@@ -529,7 +582,8 @@ class Visualization {
   increaseAttentionToPoint(objectID) {
     if (objectID != 0) {
       iris[objectID - 1].attention++;
-      console.log(iris[objectID - 1].id, iris[objectID - 1].attention)
+      console.log(iris[objectID - 1].id, iris[objectID - 1].attention); 
+      if(iris[objectID-1].attention > maxAttention) maxAttention = iris[objectID-1].attention; 
     }
   }
 
@@ -547,10 +601,10 @@ class Visualization {
     for (const element of dataPoints.children) {
       element.material.color = baseColor;
     }
-    let maxAttention = 0;
+    // let maxAttention = 0;
     for (let index = 0; index < iris.length; index++) {
       // if(iris[index].attention > maxAttention) maxAttention = iris[index].attention; 
-      maxAttention = iris[index].attention > maxAttention ? iris[index].attention : maxAttention;
+      // maxAttention = iris[index].attention > maxAttention ? iris[index].attention : maxAttention;
       console.log("attention", maxAttention);
     }
     console.log(maxAttention)
@@ -558,7 +612,7 @@ class Visualization {
   }
 
   updateAttentionColor(objectID, maxAttention) {
-    console.log("recolouring");
+    //console.log("recolouring");
     for (const element of dataPoints.children) {
       if (element.name == objectID) {
         let attentionOnPoint = iris[objectID - 1].attention;
@@ -576,7 +630,7 @@ class Visualization {
   }
 
   startExperiment() {
-    this.resetAttentionToAllPoints();
+    // this.resetAttentionToAllPoints();
     experimentStarted = true;
   }
 
@@ -585,14 +639,31 @@ class Visualization {
   }
 
   showExperimentResults() {
-    let maxAttention = this.showLevelsOfAttentionOnAllPoints();
+    let maxiAttention = this.showLevelsOfAttentionOnAllPoints();
     for (const element of dataPoints.children) {
-      this.updateAttentionColor(element.name, maxAttention);
+      this.updateAttentionColor(element.name, maxiAttention);
     }
   }
   resetColorsOnAllPoints() {
     for (const element of dataPoints.children) {
       this.recolorPoint(element, element.material.userData.originalColor);
+    }
+    this.resetAttentionToAllPoints();
+  }
+
+  calculatePickingArea() {
+    this.centerRow = Math.floor((this.params.areaPickSize) / 2);
+    this.centerColumn = Math.floor((this.params.areaPickSize) / 2);
+    pickingTextureAreaHover = new THREE.WebGLRenderTarget(this.params.areaPickSize, this.params.areaPickSize);
+  }
+
+  toggleLiveUpdate() {
+    if(liveUpdate) {
+      liveUpdate = false; 
+      console.log("Live updates turned off"); 
+    } else {
+      liveUpdate = true; 
+      console.log("Live updates turned on"); 
     }
   }
 }

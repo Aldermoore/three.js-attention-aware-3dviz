@@ -1,4 +1,5 @@
-import { Color, Scene } from 'three';
+import { Color, Scene } from 'https://unpkg.com/three@0.160.0/build/three.module.js'; // three
+
 
 function createScene() {
   const scene = new Scene();

@@ -34,26 +34,6 @@ h1 {
   background-color: skyblue;
 }
 
-.settingspanel {
-  position: relative;
-  float: left;
-}
-
-.settings {
-  width: 200px;
-  height: 100%; 
-  background-color: skyblue;
-  visibility: hidden;
-
-}
-.settingsitem {
-  border: 2px dashed red;
-  padding: 5px;
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-}
-
 /*
   Styling below is just to show that it works, and should be removed! 
 */

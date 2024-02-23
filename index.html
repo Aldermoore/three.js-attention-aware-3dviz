@@ -15,9 +15,12 @@
     {
       "imports": {
         "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        "OrbitControls": "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js", 
+        "GUI": "https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm",
+        "tween": "https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js"
       }
     }
+    
   </script>
 
   <script type="module" src="./src/main.js"></script>
@@ -32,28 +35,6 @@
   <div id="scene-container">
     <!-- Our <canvas> will be inserted here -->
   </div>
-  <!--<div class="settingspanel">
-    <button id="settingsToggle">Show settings</button>
-    <div class="settings" id="settingsContainer">
-      <div class="settingsitem">
-        <h3>Experiment stuff</h3>
-        <button id="startExperiment">Start</button>
-        <button id="stopExperiment">Stop</button>
-        <button id="showExperimentResults">Show results</button>
-        <button id="reset">Reset</button>
-      </div>
-      <div class="settingsitem">
-        <h3>Toggle some seting here</h3>
-        Experiment stuff
-        <input type="range" id="volume" name="Something" min="0" max="11" />
-        Experiment stuff
-        <input type="range" id="volume" name="Something" min="0" max="11" />
-        Experiment stuff
-        <input type="range" id="volume" name="Something" min="0" max="11" />
-      </div>
-    </div>
-  </div>
--->
 </body>
 
 </html>

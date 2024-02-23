@@ -1,4 +1,4 @@
-import { DirectionalLight, AmbientLight } from 'three';
+import { DirectionalLight, AmbientLight } from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
 function createLights() {
   const ambientLight = new AmbientLight(0x222222, 50);

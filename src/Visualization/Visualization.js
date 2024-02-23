@@ -1,26 +1,30 @@
-import * as THREE from 'three';
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js'; // three
+// THREEjs libraries 
+// import TWEEN from "https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js" //  '@tweenjs/tween.js'
+// lil-gui library (NOT USED RIGHT NOW)
+// import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
 import { createCamera } from './components/camera.js';
-import { createCube } from './components/cube.js';
+// import { createCube } from './components/cube.js';
 import { createLights } from './components/lights.js';
 import { createScene } from './components/scene.js';
-import { createOrthograpichCamera } from './components/cameraOrthographic.js';
+// import { createOrthograpichCamera } from './components/cameraOrthographic.js';
 
 import { createRenderer } from './systems/renderer.js';
 import { Resizer } from './systems/Resizer.js';
-import { Loop } from './systems/Loop.js';
+// import { Loop } from './systems/Loop.js';
 import { createControls } from './systems/controls.js'
 import iris from './data/iris.json' assert {type: 'json'}; //Our data
 import { ViewHelper } from './components/viewHelper.js';
-// THREEjs libraries 
-import TWEEN from '@tweenjs/tween.js'
 
-import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+
 
 
 let camera;
 let renderer;
 let scene;
-let loop;
+// let loop;
 let viewHelper;
 
 let dataPoints;
@@ -94,7 +98,7 @@ class Visualization {
     // camera = createOrthograpichCamera(width, height);
     renderer = createRenderer();
     scene = createScene();
-    loop = new Loop(camera, scene, renderer);
+    // loop = new Loop(camera, scene, renderer);
     container.append(renderer.domElement);
     window.addEventListener('mousemove', this.onMouseMove, false);
 
@@ -229,7 +233,7 @@ class Visualization {
     renderer.autoClear = false;
     viewHelper.render(renderer);
     renderer.autoClear = true;
-    TWEEN.update();
+    // TWEEN.update();
   }
 
   start() {
@@ -240,7 +244,7 @@ class Visualization {
   }
 
   stop() {
-    loop.stop();
+    // loop.stop();
   }
 
   animate() {

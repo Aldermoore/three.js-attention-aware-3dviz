@@ -1,4 +1,5 @@
-import { PerspectiveCamera } from 'three';
+import { PerspectiveCamera } from "https://unpkg.com/three@0.160.0/build/three.module.js"; //three
+
 
 function createCamera() {
   const camera = new PerspectiveCamera(

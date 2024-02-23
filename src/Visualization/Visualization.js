@@ -1,18 +1,18 @@
-import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js'; // three
+import * as THREE from 'three';
 // THREEjs libraries 
-// import TWEEN from "https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js" //  '@tweenjs/tween.js'
+import TWEEN from '@tweenjs/tween.js'; 
 // lil-gui library (NOT USED RIGHT NOW)
-// import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
 import { createCamera } from './components/camera.js';
-// import { createCube } from './components/cube.js';
+import { createCube } from './components/cube.js';
 import { createLights } from './components/lights.js';
 import { createScene } from './components/scene.js';
-// import { createOrthograpichCamera } from './components/cameraOrthographic.js';
+import { createOrthograpichCamera } from './components/cameraOrthographic.js';
 
 import { createRenderer } from './systems/renderer.js';
 import { Resizer } from './systems/Resizer.js';
-// import { Loop } from './systems/Loop.js';
+import { Loop } from './systems/Loop.js';
 import { createControls } from './systems/controls.js'
 import iris from './data/iris.json' assert {type: 'json'}; //Our data
 import { ViewHelper } from './components/viewHelper.js';

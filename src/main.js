@@ -1,5 +1,5 @@
 import { Visualization } from './Visualization/Visualization.js';
-import { GUI } from 'https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm';
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
 
 let viz;

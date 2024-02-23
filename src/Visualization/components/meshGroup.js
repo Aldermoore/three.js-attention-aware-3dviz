@@ -1,4 +1,4 @@
-import { Group } from 'https://unpkg.com/three@0.160.0/build/three.module.js'; //three
+import { Group } from 'three';
 
 function createMeshGroup() {
     // a group holds other objects

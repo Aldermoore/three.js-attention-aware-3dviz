@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-this-alias */
-import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js"; // three
+import * as THREE from 'three'; 
 
 
 class ViewHelper extends THREE.Object3D {

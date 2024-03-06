@@ -77,8 +77,8 @@ function main() {
     viz.toggleEmphasis(value);
   } );
   expSettings.add(params, 'resetColors').name("Reset colours of the visualization"); 
-  expSettings.add(params, 'underAttended').name("Highlight under-attended points"); 
-  expSettings.add(params, 'overAttended').name("Darken over-attended points"); 
+  // expSettings.add(params, 'underAttended').name("Highlight under-attended points"); 
+  // expSettings.add(params, 'overAttended').name("Darken over-attended points"); 
   gui.open();
 
   // start the animation loop

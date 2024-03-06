@@ -24,6 +24,34 @@
 </head>
 
 <body>
+  <script type="x-shader/x-vertex" id="vertexshader">
+
+    varying vec2 vUv;
+
+    void main() {
+
+      vUv = uv;
+
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+    }
+
+  </script>
+
+  <script type="x-shader/x-fragment" id="fragmentshader">
+
+    uniform sampler2D baseTexture;
+    uniform sampler2D bloomTexture;
+
+    varying vec2 vUv;
+
+    void main() {
+
+      gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+
+    }
+
+  </script>
   <h1>Attention Aware 3D Visualization</h1>
   <div class="yellowmessage" id="yellowmessage"></div>
   <div class="tealmessage" id="tealmessage"></div>
@@ -32,6 +60,28 @@
   <div id="scene-container">
     <!-- Our <canvas> will be inserted here -->
   </div>
+  <!--<div class="settingspanel">
+    <button id="settingsToggle">Show settings</button>
+    <div class="settings" id="settingsContainer">
+      <div class="settingsitem">
+        <h3>Experiment stuff</h3>
+        <button id="startExperiment">Start</button>
+        <button id="stopExperiment">Stop</button>
+        <button id="showExperimentResults">Show results</button>
+        <button id="reset">Reset</button>
+      </div>
+      <div class="settingsitem">
+        <h3>Toggle some seting here</h3>
+        Experiment stuff
+        <input type="range" id="volume" name="Something" min="0" max="11" />
+        Experiment stuff
+        <input type="range" id="volume" name="Something" min="0" max="11" />
+        Experiment stuff
+        <input type="range" id="volume" name="Something" min="0" max="11" />
+      </div>
+    </div>
+  </div>
+-->
 </body>
 
 </html>

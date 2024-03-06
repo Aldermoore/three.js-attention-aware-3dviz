@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-this-alias */
-import * as THREE from 'three'; 
-
+import * as THREE from "three";
 
 class ViewHelper extends THREE.Object3D {
   constructor( editorCamera, container, controls ) {

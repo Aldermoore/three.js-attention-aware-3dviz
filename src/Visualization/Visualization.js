@@ -1,11 +1,5 @@
 import * as THREE from 'three';
-// THREEjs libraries 
-import TWEEN from '@tweenjs/tween.js'; 
-// lil-gui library (NOT USED RIGHT NOW)
-import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-
 import { createCamera } from './components/camera.js';
-import { createCube } from './components/cube.js';
 import { createLights } from './components/lights.js';
 import { createScene } from './components/scene.js';
 import { createOrthograpichCamera } from './components/cameraOrthographic.js';
@@ -16,16 +10,28 @@ import { Loop } from './systems/Loop.js';
 import { createControls } from './systems/controls.js'
 import iris from './data/iris.json' assert {type: 'json'}; //Our data
 import { ViewHelper } from './components/viewHelper.js';
+// THREEjs libraries 
+import TWEEN from '@tweenjs/tween.js'
 
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+import Stats from 'three/addons/libs/stats.module.js';
 
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 
 
 let camera;
 let renderer;
 let scene;
-// let loop;
+let loop;
 let viewHelper;
+let stats;
 
 let dataPoints;
 let pickingPoints;
@@ -33,9 +39,8 @@ let pickingScene;
 let matrix;
 let quaternion;
 let color;
-var pickingObjects = [],
-  pickingMaterial, pickingTextureHover, pickingTextureAreaHover, pickingTextureOcclusion;
-var objects = [];
+var pickingMaterial, pickingTextureHover, pickingTextureAreaHover, pickingTextureOcclusion;
+
 var mousePick = new THREE.Vector2();
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
@@ -43,20 +48,35 @@ var mouse = new THREE.Vector2();
 const width = window.innerWidth;
 const height = window.innerHeight;
 
-var maxAttention = 0; 
+var screenBuffer;
+let facesMaxAttention = 0;
+let facesAttentionStore = [];
+let bjectMaxAttention = 0;
+let objectAttentionStore = [];
+
+let tempObjectAttentionStore = []; 
+let triggeredStore = [];
+const deemphasizeThreshold = 90; 
+const emphasizeThreshold = 5; 
+
+const attentionIntervalMS = 100;
+const recolorIntervalMS = 100;
+var attentionID;
+var reColorID;
+var decayID;
+const decayRate = 1000;
 
 
 
 
-
-
-const colorScale = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB'];  
+const colorScale = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB'];
 // Blue, red, green, yellow, cyan, purple, grey. See https://personal.sron.nl/~pault/#sec:qualitative 
 var attentionList;
 
 
 let experimentStarted = false;
-var liveUpdate = false; 
+var liveUpdate = false;
+
 
 
 
@@ -70,39 +90,30 @@ var frustummessage;
 
 class Visualization {
 
-
   params = {
     x: 0,
     y: 0,
     z: 0,
-    areaPickSize: 101, //should be an odd number!!
-    // Start: function () {
-    //   this.startExperiment();
-    // },
-    // Stop: function () {
-    //   this.stopExperiment();
-    // },
-    // Show_Results: function () {
-    //   this.showExperimentResults();
-    // },
-    // Reset: function () {
-    //   this.resetColorsOnAllPoints();
-    // }
+    areaPickSize: 501, //should be an odd number!!
+    allowDeemphasis: true,
+    allowEmphasis: true
   };
 
   centerRow = Math.floor((this.params.areaPickSize) / 2);
   centerColumn = Math.floor((this.params.areaPickSize) / 2);
+  radius = this.params.areaPickSize / 2;
+  radiusSquared = this.radius * this.radius;
 
   constructor(container) {
     camera = createCamera();
     // camera = createOrthograpichCamera(width, height);
     renderer = createRenderer();
     scene = createScene();
-    // loop = new Loop(camera, scene, renderer);
+    loop = new Loop(camera, scene, renderer);
     container.append(renderer.domElement);
     window.addEventListener('mousemove', this.onMouseMove, false);
 
-    this.calculatePickingArea(); 
+    this.calculatePickingArea();
 
 
     dataPoints = new THREE.Group();
@@ -110,11 +121,11 @@ class Visualization {
     matrix = new THREE.Matrix4();
     quaternion = new THREE.Quaternion();
     color = new THREE.Color();
-    // add buffer geometry to picking scene
+
     pickingScene = new THREE.Scene();
     pickingTextureHover = new THREE.WebGLRenderTarget(1, 1);
     pickingTextureAreaHover = new THREE.WebGLRenderTarget(this.params.areaPickSize, this.params.areaPickSize);
-    pickingTextureOcclusion = new THREE.WebGLRenderTarget(width, height); //, { format: THREE.RGBAFormat }); // window.innerWidth, window.innerHeight
+    pickingTextureOcclusion = new THREE.WebGLRenderTarget(width, height);
     pickingMaterial = new THREE.MeshBasicMaterial({
       vertexColors: true
     });
@@ -126,22 +137,21 @@ class Visualization {
     hovermessage = document.getElementById('hovermessage');
     frustummessage = document.getElementById('frustummessage');
 
-    // const cube = createCube();
+
     const controls = createControls(camera, renderer.domElement);
     const { ambientLight, mainLight } = createLights();
     viewHelper = new ViewHelper(camera, container, controls);
-    // loop.updatables.push(cube);
+
 
     scene.add(ambientLight, mainLight);
 
-    // this.init();
 
-    // scene.add(cube);
     const resizer = new Resizer(container, camera, renderer);
     resizer.onResize = () => {
       this.render(); // Technically not needed if we just constantly rerender each frame. 
     }
-
+    stats = new Stats();
+    container.appendChild(stats.dom);
 
 
 
@@ -154,6 +164,7 @@ class Visualization {
     scene.add(dataPoints);
     pickingScene.add(pickingPoints);
 
+    // TODO nice way for the user to choose this, rather than being hardcoded 
     var xAttr = Object.keys(iris[0])[0] // iris.sepalLength; 
     var yAttr = Object.keys(iris[0])[1] // iris.sepalWidth;
     var zAttr = Object.keys(iris[0])[3] // iris.petalWidth; 
@@ -170,7 +181,7 @@ class Visualization {
       };
     }
     let speciesList = Object.values(tempResult);
-    console.log(speciesList.length);
+    // console.log(speciesList.length);
 
     let xAttrMax = Math.max.apply(null, iris.map(function (o) { return o.sepalLength }));
     let xAttrMin = Math.min.apply(null, iris.map(function (o) { return o.sepalLength }));
@@ -181,15 +192,11 @@ class Visualization {
     let zAttrMax = Math.max.apply(null, iris.map(function (o) { return o.petalWidth }));
     let zAttrMin = Math.min.apply(null, iris.map(function (o) { return o.petalWidth }));
 
-
-
     for (let index = 0; index < iris.length; index++) {
 
       const element = iris[index];
       element.id = index + 1;
       element.attention = 0;
-
-
 
       // Determine color based on species attribute 
       // Colours in default order: '#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB'.
@@ -211,20 +218,21 @@ class Visualization {
       // TODO: Normalise input data to a desired, configurable size of the visualization. 
       this.createSphere(index + 1, color, new THREE.Vector3(xVal, yVal, zVal), 0.5);
 
-      // Old hardcoded version
-      // this.createSphere(index + 1, color, new THREE.Vector3(element.sepalLength * 10 - 40 , element.sepalWidth * 10 - 20, element.petalWidth * 10), 0.5);
-
-      // This version separates knowledge of the data obejct fro mteh visualisation. 
-      // this.createSphere(index + 1, color, new THREE.Vector3(Object.values(element)[0] * 10 - 40, Object.values(element)[1] * 10 - 20, Object.values(element)[3] * 10), 0.5);
-    }
-    // this.showLevelsOfAttentionOnAllPoints();
-    // let nums = 123; 
-    //console.log(assignColor('#e4ff7a','#fc7f00',0,3000,nums));
-    // setInterval(() => {
-    //   this.resetAttentionToAllPoints();
-    //   this.showLevelsOfAttentionOnAllPoints();
-    // }, 5000);
+    } // for
   }
+
+
+  start() {
+    this.init();
+    this.render();
+    this.animate();
+  }
+
+
+  stop() {
+    loop.stop();
+  }
+
 
   render() {
     // draw a single frame
@@ -233,68 +241,76 @@ class Visualization {
     renderer.autoClear = false;
     viewHelper.render(renderer);
     renderer.autoClear = true;
-    // TWEEN.update();
+    TWEEN.update();
   }
 
-  start() {
-    this.init();
-    this.render();
-    // loop.start();
-    this.animate();
-  }
-
-  stop() {
-    // loop.stop();
-  }
 
   animate() {
     renderer.setAnimationLoop(() => {
       this.render();
-      this.isHoveringBuffer();
-      this.checkForOcclusion();
+
+      screenBuffer = this.checkForOcclusion();
       this.checkFrustum();
-      let hoverID = this.isHoveringBuffer();
-      let hoverIDs = this.isHoveringAreaBuffer();
-      //this.hoveringRaycaster();
 
-      let notOccluded = dataPoints.children.filter((objects => objects.isOccluded === true));
+      stats.update();
 
-      yellowmessage.innerHTML = "No. occlusions: " + notOccluded.length;
-      let occludedMsg = "Occluded:";
-      notOccluded.forEach((element => occludedMsg += " " + element.name));
-      tealmessage.innerHTML = occludedMsg;
+      // We only use attention aware strategies if the experiment is running and we are not currently live-showing the cumulative attention 
+      if (experimentStarted && !liveUpdate) {
+        // console.log(tempObjectAttentionStore);
+        for (const element of dataPoints.children) {
+          
+          if (this.params.allowDeemphasis && tempObjectAttentionStore[element.name] > deemphasizeThreshold) { // check if point needs to be deemphasised
+            triggeredStore[element.name] = true;
+            // deemphasizing 
+            element.material.color.lerp(new THREE.Color("#555555"), 0.05);
+            
+          } else if (this.params.allowEmphasis && tempObjectAttentionStore[element.name] < emphasizeThreshold) { // check if point needs to be emphasised 
 
-      let objNotInFrustum = dataPoints.children.filter((objects => objects.inFrustum === false));
-      let frustumMsg = "Not in frustum:";
-      objNotInFrustum.forEach((element => frustumMsg += " " + element.name));
-      tealmessage.innerHTML = occludedMsg;
-      frustummessage.innerHTML = frustumMsg;
+            triggeredStore[element.name] = true;
+            // emphasize
+            element.material.color.lerp(new THREE.Color("#FFFFFF"), 0.05);
+            this.applyVertexColors(element.geometry, new THREE.Color('orange'));
 
-      if (experimentStarted) {
-        for (let i = 0; i < hoverIDs.length; i++) {
-          if (hoverIDs[i] > 0) {
-            this.increaseAttentionToPoint(hoverIDs[i]);
-            // this.updateAttentionColor(hoverIDs[i]);
+          } else {
+
+            // check if point is currently emphasised or deemphasised
+            if (triggeredStore[element.name]) {
+
+              tempObjectAttentionStore[element.name] = 50; // return to baseline 
+              triggeredStore[element.name] = false; // Set the point to be not currently emphasised or deemphasised
+            
+            }
+
+            // restore to baseline 
+            if (element.material.color != new THREE.Color('silver')) {
+
+              element.material.color.lerp(new THREE.Color('silver'), 0.1);
+
+            }
+
+            this.applyVertexColors(element.geometry, new THREE.Color(element.material.userData.originalColor));
           }
-        }
+        } // for
       }
-
-      if(liveUpdate) {
-        iris.forEach(element => {
-          this.updateAttentionColor(element.id, maxAttention);
-        });
-      }
-      hovermessage.innerHTML = "hovering over object of ID: " + hoverIDs;
-      /*
-      if (hoverID > 0) {
-        this.increaseAttentionToPoint(hoverID);
-        this.updateAttentionColor(hoverID);
-      }
-      */
-      // this.selectMarksWithSameAttribute(hoverID, "petalLength");
-      // this.highLightMark(hoverID);
     });
   }
+
+
+  onWindowResize() {
+
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+  }
+
+
+  /******************** 
+   * OBJECT CREATION CODE
+   * These functions are primarily used for object creation purposes
+  */
+
 
   /**
    * 
@@ -303,23 +319,119 @@ class Visualization {
    * @param {THREE.Vector3} position Vector position of the mesh created
    */
   createSphere(id, markColor, position, size) {
-    let geometry = new THREE.SphereGeometry(size, 12, 8);
-    let material = new THREE.MeshPhongMaterial({ color: markColor, flatShading: true, userData: { oldColor: markColor } });
+    let geometry = new THREE.SphereGeometry(size, 8, 4);
+    let material = new THREE.MeshPhongMaterial({ color: 'silver', flatShading: false, userData: { oldColor: markColor }, vertexColors: true });
     material.userData.originalColor = markColor;
     let sphere = new THREE.Mesh(geometry, material);
+
+    facesAttentionStore[id] = new Array(geometry.attributes.position.count * 2); // TODO: find the optimal size for this array! 
+    facesAttentionStore[id].fill(0);
+    objectAttentionStore[id] = 0;
+    tempObjectAttentionStore[id] = 50;
+
 
     sphere.name = id;
     sphere.position.set(position.x, position.y, position.z);
 
-    let pickingSphere = this.createBuffer(geometry, sphere);
+
+    let pickingSphere = this.createSphereBuffer(geometry, sphere);
     let pickingMesh = new THREE.Mesh(pickingSphere, pickingMaterial);
     pickingMesh.name = id;
+
+    sphere.geometry = sphere.geometry.toNonIndexed();
+    // sphere.material.vertexColors = true;
+    this.applyVertexColors(sphere.geometry, new THREE.Color(markColor)); // markColor
+    // sphere.material.needsUpdate;
+
     dataPoints.add(sphere);
     pickingPoints.add(pickingMesh);
-    //sphere.geometry.toNonIndexed();
     return { sphere, pickingMesh };
   }
 
+
+  /**
+   * 
+   * @param {THREE.SphereGeometry} geometry The geometry who's attributes to copy
+   * @param {THREE.Mesh} mesh The mesh who's position and ID to copy
+   * @returns THREE.SphereGeometry constructed from the input geometry and mesh
+   */
+  createSphereBuffer(geometry, mesh) {
+    var buffer = new THREE.SphereGeometry(geometry.parameters.radius, geometry.parameters.widthSegments, geometry.parameters.heightSegments).toNonIndexed();; // SphereBufferGeometry
+    quaternion.setFromEuler(mesh.rotation);
+    matrix.compose(mesh.position, quaternion, mesh.scale);
+    buffer.applyMatrix4(matrix);
+    buffer.name = mesh.name;
+    this.applyUniqueVertexColors(buffer, buffer.name); // , color.setHex(mesh.name));
+
+    return buffer;
+  }
+
+
+  /**
+   * Recolors the object in the specified color
+   * @param {THREE.BufferGeometry} geometry The geometry in the scene to recolor
+   * @param {THREE.Color} color The color to recolor the object in
+   */
+  applyVertexColors(geometry, color) {
+    // Color needs to be converted from Linear to SRGB because reasons 
+    // (if not the color will be wrong for all but primary (e.g. R=1,B=0,G=0) and secondary (e.g. R=1,B=1,G=0) colors!)
+    color.convertLinearToSRGB();
+    var position = geometry.attributes.position;
+    var colors = [];
+    for (var i = 0; i < position.count; i += 3) {
+      colors.push(color.r, color.g, color.b);
+      colors.push(color.r, color.g, color.b);
+      colors.push(color.r, color.g, color.b);
+    }
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.colorsNeedUpdate = true;
+  }
+
+
+  /**
+   * Gives each face of every object a unique color, allowing each face to be identified via GPU picking
+   * @param {THREE.BufferGeometry} geometry The geometry in the scene to recolor
+   * @param {number} geometryID An ID of the geometry, must be between 1 and 255
+   */
+  applyUniqueVertexColors(geometry, geometryID) {
+    const colors = [];
+    const color = new THREE.Color();
+    const position = geometry.getAttribute('position');
+
+    for (let i = 0; i < position.array.length; i += 3) {
+      let hex = (geometryID << 16) + i / 3;
+      // console.log("ID:", geometryID, "Vertex:", i / 3, "Hexcode:", hex);
+      color.setHex(hex);
+      /*
+      Color needs to be converted from Linear to SRGB because reasons 
+      (if not the color will be wrong for all but primary (e.g. R=1,B=0,G=0) and secondary (e.g. R=1,B=1,G=0) colors!)
+      */
+      color.convertLinearToSRGB();
+      colors.push(color.r, color.g, color.b);
+      colors.push(color.r, color.g, color.b);
+      colors.push(color.r, color.g, color.b);
+
+    }
+    // define the new attribute
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.colorsNeedUpdate = true;
+  }
+
+
+
+
+  /********************
+   * OCCLUSION, HOVERING AND FRUSTUM CHECKING 
+   * These functions are used to determine which objects are within the frustum (camera's FOV), whether objects are visible on the screen or occluded, and which objects are located underneath and around the cursor. 
+   */
+
+
+
+
+  /**
+   * Renders the entires scene in a seperate pickingScene. Used to determine which objects are visible on the screen via GPU picking 
+   * @returns buffer of the entire screen. Each value is the colour of the pixel as a hex-value. 
+   */
   checkForOcclusion() {
     renderer.setRenderTarget(pickingTextureOcclusion);
     renderer.render(pickingScene, camera);
@@ -328,12 +440,43 @@ class Visualization {
     renderer.setRenderTarget(null);
     var hexBuffer = this.rgbaToHex(pixelBuffer);
 
-    dataPoints.children.forEach(element => {
-      if (hexBuffer.includes(element.name)) {
-        element.isOccluded = false;
-      } else element.isOccluded = true;
-    });
+    // dataPoints.children.forEach(element => {
+    //   if (hexBuffer.includes(element.name)) {
+    //     element.isOccluded = false;
+    //   } else element.isOccluded = true;
+    // });
+    return hexBuffer;
   }
+
+
+  isHoveringAreaBuffer(buffer) {
+    let subBuffer = this.findAreaFromArray(buffer, this.params.areaPickSize, mousePick.x, mousePick.y);
+    return subBuffer;
+  }
+
+
+  isOccludedBuffer(object) {
+    renderer.setRenderTarget(pickingTextureOcclusion);
+    renderer.render(pickingScene, camera);
+    var pixelBuffer = new Uint8Array(width * height * 4);
+    renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, width, height, pixelBuffer);
+    renderer.setRenderTarget(null);
+    var hexBuffer = this.rgbaToHex(pixelBuffer);
+
+    return !hexBuffer.includes(object.name);
+  }
+
+
+  isHoveringRaycaster(object) {
+    raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObjects(scene.children);
+    if (intersects[0] && intersects[0].object === object) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
 
   isHoveringBuffer() {
     camera.setViewOffset(renderer.domElement.width, renderer.domElement.height, mousePick.x * window.devicePixelRatio | 0, mousePick.y * window.devicePixelRatio | 0, 1, 1);
@@ -349,62 +492,6 @@ class Visualization {
     } else return 0;
   }
 
-  isHoveringAreaBuffer() {
-    camera.setViewOffset( renderer.domElement.width, 
-                          renderer.domElement.height, 
-                          mousePick.x * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
-                          mousePick.y * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
-                          this.params.areaPickSize, 
-                          this.params.areaPickSize );
-    renderer.setRenderTarget(pickingTextureAreaHover);
-    renderer.render(pickingScene, camera);
-    camera.clearViewOffset();
-    var pixelBuffer = new Uint8Array(this.params.areaPickSize * this.params.areaPickSize * 4);
-    renderer.readRenderTargetPixels(pickingTextureAreaHover, 0, 0, this.params.areaPickSize, this.params.areaPickSize, pixelBuffer);
-    var hexBuffer = this.rgbaToHex(pixelBuffer);
-    renderer.setRenderTarget(null);
-    let IDs = [0];
-    let j = 0;
-    // for calculating the circular cutout of the buffer
-    let row = 0;
-    let column = 0;
-    let radius = this.params.areaPickSize / 2;
-    let radiusSquared = radius * radius;
-    for (let i = 0; i < hexBuffer.length; i++) {
-      if (hexBuffer[i] !== 0) {
-        if (!IDs.includes(hexBuffer[i])) {
-          if (this.isInsideCirle(row, column, this.centerRow, this.centerColumn, radiusSquared)) {
-            IDs[j] = hexBuffer[i];
-            j++;
-          }
-        }
-      }
-      column++;
-      if (column >= this.params.areaPickSize) {
-        column = 0;
-        row++;
-      }
-    }
-    return IDs;
-  }
-
-  isInsideCirle(row, column, centerRow, centerColumn, radiusSquared) {
-    let dx = centerRow - row;
-    let dy = centerColumn - column;
-    let distance = dx * dx + dy * dy;
-    return distance <= radiusSquared
-  }
-
-  isHoveringRaycaster(object) {
-    raycaster.setFromCamera(mouse, camera);
-    var intersects = raycaster.intersectObjects(scene.children);
-    if (intersects[0] && intersects[0].object === object) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-
 
   hoveringRaycaster() {
     raycaster.setFromCamera(mouse, camera);
@@ -417,16 +504,6 @@ class Visualization {
     return intersects[0];
   }
 
-  isOccludedBuffer(object) {
-    renderer.setRenderTarget(pickingTextureOcclusion);
-    renderer.render(pickingScene, camera);
-    var pixelBuffer = new Uint8Array(width * height * 4);
-    renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, width, height, pixelBuffer);
-    renderer.setRenderTarget(null);
-    var hexBuffer = rgbaToHex(pixelBuffer);
-
-    return !hexBuffer.includes(object.name);
-  }
 
   isOccludedRaycaster(object) {
     raycaster.setFromCamera(getScreenPos(object), camera);
@@ -437,6 +514,7 @@ class Visualization {
       return true;
     }
   }
+
 
   inFrustum(object) {
     var frustum = new THREE.Frustum();
@@ -454,6 +532,43 @@ class Visualization {
       } else element.inFrustum = false;
     });
   }
+
+
+  findAreaFromArray(array, squareSize, xCor, yCor) {
+    yCor = Math.abs(yCor - height); // reversing the Y-coordinate
+    let row = 0;
+    let column = 0;
+    let startRow = Math.ceil(yCor - squareSize / 2);
+    startRow = startRow < 0 ? 0 : startRow;
+    let endRow = Math.floor(yCor + squareSize / 2);
+    endRow = endRow > height ? height : endRow;
+    let startCol = Math.ceil(xCor - squareSize / 2);
+    startCol = startCol < 0 ? 0 : startCol;
+    let endCol = Math.floor(xCor + squareSize / 2);
+    endCol = endCol > width ? width : endCol;
+    let subArray = []
+
+    for (let index = 0; index < array.length; index++) {
+      if (row >= startRow && row <= endRow && column >= startCol && column <= endCol) {
+        subArray.push(array[index]);
+      }
+      column++;
+      if (column >= width) {
+        column = 0;
+        row++;
+      }
+    }
+    return subArray;
+  }
+
+
+  isInsideCirle(row, column, centerRow, centerColumn, radiusSquared) {
+    let dx = centerRow - row;
+    let dy = centerColumn - column;
+    let distance = dx * dx + dy * dy;
+    return distance <= radiusSquared
+  }
+
 
   /**
    * Convert array of RGBA colors to Hex colors. 
@@ -473,27 +588,16 @@ class Visualization {
     return hexBuffer
   }
 
-  createBuffer(geometry, mesh) {
-    var buffer = new THREE.SphereGeometry(geometry.parameters.radius, geometry.parameters.widthSegments, geometry.parameters.heightSegments); // SphereBufferGeometry
-    quaternion.setFromEuler(mesh.rotation);
-    matrix.compose(mesh.position, quaternion, mesh.scale);
-    buffer.applyMatrix4(matrix);
-    this.applyVertexColors(buffer, color.setHex(mesh.name));
-    buffer.name = mesh.name;
-    return buffer;
-  }
 
-  applyVertexColors(geometry, color) {
-    // Color needs to be converted from Linear to SRGB because reasons 
-    // (if not the color will be wrong for all but primary (e.g. R=1,B=0,G=0) and secondary (e.g. R=1,B=1,G=0) colors!)
-    color.convertLinearToSRGB();
-    var position = geometry.attributes.position;
-    var colors = [];
-    for (var i = 0; i < position.count; i++) {
-      colors.push(color.r, color.g, color.b);
-    }
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  }
+
+
+
+  /********************
+   * HELPER FUNCTIONS 
+   */
+
+
+
 
   onMouseMove(event) {
     mouse.x = (event.clientX / width) * 2 - 1;
@@ -502,6 +606,7 @@ class Visualization {
     mousePick.y = event.clientY;
   }
 
+
   getScreenPos(object) {
     var pos = object.position.clone();
     camera.updateMatrixWorld();
@@ -509,14 +614,251 @@ class Visualization {
     return new THREE.Vector2(pos.x, pos.y);
   }
 
+
   calcDistanceBetweenObjects(objectA, objectB) {
     let distance = Math.sqrt((objectB.position.x - objectA.position.x) ^ 2 + (objectB.position.y - objectA.position.y) ^ 2 + (objectB.position.z - objectA.position.z) ^ 2);
     console.log("The distance is " + distance);
   }
 
+
   map_range(x, in_min, in_max, out_min, out_max) {
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
   }
+
+
+  calculatePickingArea() {
+    this.centerRow = Math.floor((this.params.areaPickSize) / 2);
+    this.centerColumn = Math.floor((this.params.areaPickSize) / 2);
+    pickingTextureAreaHover = new THREE.WebGLRenderTarget(this.params.areaPickSize, this.params.areaPickSize);
+    console.log("The Viz' picking area is now ", this.params.areaPickSize);
+  }
+
+
+  circleFromSquareBuffer(buffer) {
+    let tempBuffer = [];
+    let row = 0;
+    let col = 0;
+
+    for (let i = 0; i < buffer.length; i++) {
+      if (this.isInsideCirle(row, col, this.centerRow, this.centerColumn, this.radiusSquared)) {
+        tempBuffer.push(buffer[i]);
+      }
+      col++;
+      if (col >= this.params.areaPickSize) {
+        col = 0;
+        row++;
+      }
+    }
+    return tempBuffer;
+  }
+
+
+  /********************
+ * ATTENTION AWARE FEEDBACK 
+ * Functions used to do cool stuff depending on the amount of attention on the points and/or faces of the objects in the scene. 
+ */
+
+
+
+
+  increaseAttentionToPoint(buffer) {
+    let colorsInBuffer = new Set(buffer);
+    if (colorsInBuffer.size === 1) return;
+    colorsInBuffer = Array.from(colorsInBuffer);
+    for (let i = 0; i < colorsInBuffer.length; i++) {
+      colorsInBuffer[i] = (colorsInBuffer[i] >> 16);
+    }
+    let objectsInBuffer = new Set(colorsInBuffer);
+    objectsInBuffer = Array.from(objectsInBuffer);
+    for (let i = 0; i < objectsInBuffer.length; i++) {
+      if (objectsInBuffer[i] != 0) {
+        objectAttentionStore[objectsInBuffer[i]]++;
+        if (tempObjectAttentionStore[objectsInBuffer[i]] < 100) {
+          tempObjectAttentionStore[objectsInBuffer[i]]++;
+        }
+      }
+    }
+  }
+
+
+  decayTempAttention() {
+    for (let i = 1; i <= tempObjectAttentionStore.length; i++) {
+      if (tempObjectAttentionStore[i] > 0) {
+        tempObjectAttentionStore[i]--;
+      }
+    }
+  }
+
+
+  showLevelsOfAttentionOnAllPoints() {
+    let baseColor = new THREE.Color("#FFFFFF"); // #666666
+
+    for (const element of dataPoints.children) {
+      element.material.color = baseColor;
+    }
+    // let maxAttention = 0;
+    for (let index = 0; index < iris.length; index++) {
+      // if(iris[index].attention > maxAttention) maxAttention = iris[index].attention; 
+      // maxAttention = iris[index].attention > maxAttention ? iris[index].attention : maxAttention;
+      console.log("attention", maxAttention);
+    }
+    console.log(maxAttention)
+    return maxAttention;
+  }
+
+
+  updateAttentionColor(objectID, maxAttention) {
+    //console.log("recolouring");
+    for (const element of dataPoints.children) {
+      if (element.name == objectID) {
+        let attentionOnPoint = iris[objectID - 1].attention;
+        if (attentionOnPoint != 0) {
+          let newColor = assignColor('#ffff00', '#ff0000', 0, maxAttention, attentionOnPoint); // colour taken from here: https://github.com/wistia/heatmap-palette
+          this.recolorPoint(element, newColor);
+        }
+      }
+    }
+  }
+
+
+  recolorPoint(element, colorHex) {
+    let color = new THREE.Color(colorHex);
+    element.material.color = color;
+  }
+
+
+  addAttentionToFaces(buffer) {
+    let colorsInBuffer = new Set(buffer);
+    if (colorsInBuffer.size === 1) return;
+    colorsInBuffer = Array.from(colorsInBuffer);
+
+    for (let i = 0; i < colorsInBuffer.length; i++) {
+      if (colorsInBuffer[i] != 0) {
+        let id = (colorsInBuffer[i] >> 16);
+        let vertex = ((colorsInBuffer[i] << 16));
+        vertex = vertex >> 16;
+        // console.log("ID:", id, "Vertex:", vertex, colorsInBuffer[i]);
+        facesAttentionStore[id][vertex]++;
+        if (facesAttentionStore[id][vertex] > facesMaxAttention) facesMaxAttention = facesAttentionStore[id][vertex];
+      }
+    }
+  }
+
+
+  /**
+   * Recolors the vertices on a point, based on the amount of attention give to them. If no new level of attention, then the objects does not change colour. 
+   * This function is used for live preview of the attention give to points. 
+   * @param {THREE.Mesh} element The mesh object in the scene to recolor. 
+   */
+  recolorVerticesOnPoint(element) {
+    let id = element.name;
+    let attentionList = facesAttentionStore[id];
+    const oldColors = element.geometry.getAttribute("color").array;
+
+    let NewDataColors = [];
+
+    let count = element.geometry.getAttribute("position").count;
+    let NewColor = new THREE.Color("red");
+
+    for (let i = 0; i <= count; i += 3) {
+      let attentionOnFace = attentionList[i / 3];
+      let oldVertexColor = new THREE.Color("silver");
+      oldVertexColor.fromArray(oldColors, i * 3);
+
+      if (attentionOnFace > 0) {
+        let col = assignColor('#ffff00', '#ff0000', 0, facesMaxAttention, attentionOnFace);
+        let newColor = new THREE.Color(col);
+
+        NewDataColors.push(newColor.r, newColor.g, newColor.b);
+        NewDataColors.push(newColor.r, newColor.g, newColor.b);
+        NewDataColors.push(newColor.r, newColor.g, newColor.b);
+      } else {
+        NewDataColors.push(oldVertexColor.r, oldVertexColor.g, oldVertexColor.b);
+        NewDataColors.push(oldVertexColor.r, oldVertexColor.g, oldVertexColor.b);
+        NewDataColors.push(oldVertexColor.r, oldVertexColor.g, oldVertexColor.b);
+      }
+    }
+    element.geometry.setAttribute('color', new THREE.Float32BufferAttribute(NewDataColors, 3));
+    element.geometry.colorsNeedUpdate = true;
+  }
+
+  /**
+   * resets the color of all objects to their original color when they were instantiated, or whichever color is stored in material.userData.originalColor
+   */
+  resetColorsOnAllPoints() {
+    for (const element of dataPoints.children) {
+      this.applyVertexColors(element.geometry, new THREE.Color(element.material.userData.originalColor));
+      element.material.color = new THREE.Color("silver");
+    }
+  }
+
+  resetAttentionToAllPoints() {
+    objectAttentionStore.fill(0);
+    for (let i = 1; i <= facesAttentionStore.length; i++) {
+      if (facesAttentionStore[i] != undefined) {
+        facesAttentionStore[i].fill(0);
+      }
+    }
+    console.log(objectAttentionStore);
+  }
+
+
+  findUnderAttendedObjects() {
+    let underAttended = new Array();
+    for (let i = 1; i <= tempObjectAttentionStore.length; i++) {
+      if (tempObjectAttentionStore[i] > 0 && tempObjectAttentionStore[i] < 20) {
+        underAttended.push(i);
+      }
+    }
+    console.log(underAttended);
+    return underAttended;
+  }
+
+
+  highLightUnderAttendedObjects() {
+    // let objectsToHighLight = this.findUnderAttendedObjects()
+    let array = new Array();
+    for (let i = 1; i <= tempObjectAttentionStore.length; i++) {
+      if (tempObjectAttentionStore[i] = 0) {
+        array.push(i);
+      }
+    }
+    for (const element of dataPoints.children) {
+      if (array.includes(element.name)) {
+        this.applyVertexColors(element.geometry, new THREE.Color('orange'));
+        // element.material.color = new THREE.Color("yellow");
+      }
+    }
+  }
+
+
+  deemphasizeOverAttendedObjects() {
+    // let objectsToHighLight = this.findUnderAttendedObjects()
+    let array = new Array();
+    for (let i = 1; i <= tempObjectAttentionStore.length; i++) {
+      if (tempObjectAttentionStore[i] > 90) {
+        array.push(i);
+      }
+    }
+    for (const element of dataPoints.children) {
+      if (array.includes(element.name)) {
+        element.material.color = new THREE.Color("#555555");
+      }
+    }
+  }
+
+
+  slowlyDeemphasizeOverAttendedObjects() {
+    let highlightColor = new THREE.Color("#555555");
+    let objectsToHighLight = this.findUnderAttendedObjects()
+    for (const element of dataPoints.children) {
+      if (!objectsToHighLight.includes(element.name)) {
+        element.material.color.lerp(highlightColor, 0.1);
+      }
+    }
+  }
+
+
 
   findAndHighLightMark(objectID) {
     console.log("Gotta highlight", objectID)
@@ -533,6 +875,7 @@ class Visualization {
       }
     }
   }
+
 
   selectMarksWithSameAttribute(objectID, attribute) {
     if (objectID > 0) {
@@ -561,11 +904,13 @@ class Visualization {
     element.material.color.lerp(highlightColor, 0.1);
   }
 
+
   unHighLightMark(element) {
     this.scaleDown(element);
     let oldColor = new THREE.Color(element.material.userData.oldColor)
     element.material.color.lerp(oldColor, 0.1);
   }
+
 
   scaleUp(object, scale) {
     new TWEEN.Tween(object.scale).to({
@@ -575,6 +920,7 @@ class Visualization {
     }, 50).easing(TWEEN.Easing.Quadratic.Out).start();
   }
 
+
   scaleDown(object) {
     new TWEEN.Tween(object.scale).to({
       x: 1,
@@ -583,95 +929,109 @@ class Visualization {
     }, 50).easing(TWEEN.Easing.Quadratic.Out).start();
   }
 
-  increaseAttentionToPoint(objectID) {
-    if (objectID != 0) {
-      iris[objectID - 1].attention++;
-      console.log(iris[objectID - 1].id, iris[objectID - 1].attention); 
-      if(iris[objectID-1].attention > maxAttention) maxAttention = iris[objectID-1].attention; 
-    }
-  }
-
-  resetAttentionToAllPoints() {
-    for (const element of dataPoints.children) {
-      iris[element.name - 1].attention = 0;
-    }
-  }
 
 
+  /********************
+   * EXPERIMENT CONTROLS 
+   * Functions used to start, stop and reset data collection 
+   */
 
-  showLevelsOfAttentionOnAllPoints() {
-    let baseColor = new THREE.Color("#888888"); // #666666
-
-    for (const element of dataPoints.children) {
-      element.material.color = baseColor;
-    }
-    // let maxAttention = 0;
-    for (let index = 0; index < iris.length; index++) {
-      // if(iris[index].attention > maxAttention) maxAttention = iris[index].attention; 
-      // maxAttention = iris[index].attention > maxAttention ? iris[index].attention : maxAttention;
-      console.log("attention", maxAttention);
-    }
-    console.log(maxAttention)
-    return maxAttention;
-  }
-
-  updateAttentionColor(objectID, maxAttention) {
-    //console.log("recolouring");
-    for (const element of dataPoints.children) {
-      if (element.name == objectID) {
-        let attentionOnPoint = iris[objectID - 1].attention;
-        if (attentionOnPoint != 0) {
-          let newColor = assignColor('#ffff00', '#ff0000', 0, maxAttention, attentionOnPoint); // colour taken from here: https://github.com/wistia/heatmap-palette
-          this.recolorPoint(element, newColor);
-        }
-      }
-    }
-  }
-
-  recolorPoint(element, colorHex) {
-    let color = new THREE.Color(colorHex);
-    element.material.color = color;
-  }
 
   startExperiment() {
     // this.resetAttentionToAllPoints();
+    console.log("Data collection started!"); 
     experimentStarted = true;
+    attentionID = setInterval(() => {
+      let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
+      let circleBuffer = this.circleFromSquareBuffer(subBuffer);
+      this.addAttentionToFaces(circleBuffer);
+      this.increaseAttentionToPoint(circleBuffer);
+    }, attentionIntervalMS);
+    decayID = setInterval(() => {
+      this.decayTempAttention();
+    }, decayRate);
   }
+
 
   stopExperiment() {
+    console.log("Data collection stopped!"); 
     experimentStarted = false;
+    clearInterval(attentionID);
+    attentionID = null;
+    clearInterval(decayID);
+    decayID = null;
   }
+
 
   showExperimentResults() {
-    let maxiAttention = this.showLevelsOfAttentionOnAllPoints();
+    // let maxiAttention = this.showLevelsOfAttentionOnAllPoints();
+    // for (const element of dataPoints.children) {
+    //   this.updateAttentionColor(element.name, maxiAttention);
+    // }
+    let color = new THREE.Color('white');
     for (const element of dataPoints.children) {
-      this.updateAttentionColor(element.name, maxiAttention);
+      // this.updateAttentionColor(element.name, maxiAttention);
+      this.applyVertexColors(element.geometry, color);
+      this.recolorVerticesOnPoint(element);
     }
-  }
-  resetColorsOnAllPoints() {
-    for (const element of dataPoints.children) {
-      this.recolorPoint(element, element.material.userData.originalColor);
-    }
-    this.resetAttentionToAllPoints();
+    console.log("Showing cumulated attention on objects"); 
   }
 
-  calculatePickingArea() {
-    this.centerRow = Math.floor((this.params.areaPickSize) / 2);
-    this.centerColumn = Math.floor((this.params.areaPickSize) / 2);
-    pickingTextureAreaHover = new THREE.WebGLRenderTarget(this.params.areaPickSize, this.params.areaPickSize);
+  resetExperimentData() {
+    this.resetAttentionToAllPoints();
+    this.resetColorsOnAllPoints();
+    console.log("Collected data reset!"); 
   }
+
 
   toggleLiveUpdate() {
-    if(liveUpdate) {
-      liveUpdate = false; 
-      console.log("Live updates turned off"); 
+    if (liveUpdate) {
+      liveUpdate = false;
+      console.log("Live preview of cumulative attention turned off");
+      clearInterval(reColorID);
+      reColorID = null;
     } else {
-      liveUpdate = true; 
-      console.log("Live updates turned on"); 
+      liveUpdate = true;
+      console.log("Live preview of cumulative attention turned on");
+      reColorID = setInterval(() => {
+        dataPoints.children.forEach(element => {
+          let seen = false;
+          let array = facesAttentionStore[element.name];
+          for (let i = 0; i < array.length; i++) {
+            if (array[i] > 0) {
+              seen = true;
+              break
+            }
+          }
+          if (seen) {
+            this.recolorVerticesOnPoint(element);
+          }
+        });
+      }, recolorIntervalMS);
     }
+  }
+
+
+  toggleDeemphasis() {
+    this.params.allowDeemphasis = !this.params.allowDeemphasis;
+    console.log("Deemphasizing is", this.params.allowDeemphasis); 
+  }
+
+
+  toggleEmphasis() {
+    this.params.allowEmphasis = !this.params.allowEmphasis;
+    console.log("Emphasizing is", this.params.allowEmphasis); 
   }
 }
 
+
+
+
+
+
+/**********
+ *  CLASSLESS HELPER FUNCTIONS
+ */
 
 
 function assignColor(minCol, maxCol, minVal, maxVal, val) {
@@ -711,5 +1071,7 @@ function compareAttention(a, b) {
 function compareID(a, b) {
   return a.id - b.id;
 }
+
+
 export { Visualization };
 

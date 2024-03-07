@@ -15,6 +15,8 @@ import TWEEN from '@tweenjs/tween.js'
 
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
+import { ARButton } from 'three/addons/webxr/ARButton.js';
+
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
@@ -54,10 +56,10 @@ let facesAttentionStore = [];
 let bjectMaxAttention = 0;
 let objectAttentionStore = [];
 
-let tempObjectAttentionStore = []; 
+let tempObjectAttentionStore = [];
 let triggeredStore = [];
-const deemphasizeThreshold = 90; 
-const emphasizeThreshold = 5; 
+const deemphasizeThreshold = 90;
+const emphasizeThreshold = 5;
 
 const attentionIntervalMS = 100;
 const recolorIntervalMS = 100;
@@ -154,6 +156,11 @@ class Visualization {
     container.appendChild(stats.dom);
 
 
+    /**
+     * WebXR stuff
+     */
+    document.body.appendChild(ARButton.createButton(renderer));
+    renderer.xr.enabled = true;
 
   }
 
@@ -258,12 +265,12 @@ class Visualization {
       if (experimentStarted && !liveUpdate) {
         // console.log(tempObjectAttentionStore);
         for (const element of dataPoints.children) {
-          
+
           if (this.params.allowDeemphasis && tempObjectAttentionStore[element.name] > deemphasizeThreshold) { // check if point needs to be deemphasised
             triggeredStore[element.name] = true;
             // deemphasizing 
             element.material.color.lerp(new THREE.Color("#555555"), 0.05);
-            
+
           } else if (this.params.allowEmphasis && tempObjectAttentionStore[element.name] < emphasizeThreshold) { // check if point needs to be emphasised 
 
             triggeredStore[element.name] = true;
@@ -278,7 +285,7 @@ class Visualization {
 
               tempObjectAttentionStore[element.name] = 50; // return to baseline 
               triggeredStore[element.name] = false; // Set the point to be not currently emphasised or deemphasised
-            
+
             }
 
             // restore to baseline 
@@ -939,7 +946,7 @@ class Visualization {
 
   startExperiment() {
     // this.resetAttentionToAllPoints();
-    console.log("Data collection started!"); 
+    console.log("Data collection started!");
     experimentStarted = true;
     attentionID = setInterval(() => {
       let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
@@ -954,7 +961,7 @@ class Visualization {
 
 
   stopExperiment() {
-    console.log("Data collection stopped!"); 
+    console.log("Data collection stopped!");
     experimentStarted = false;
     clearInterval(attentionID);
     attentionID = null;
@@ -974,13 +981,13 @@ class Visualization {
       this.applyVertexColors(element.geometry, color);
       this.recolorVerticesOnPoint(element);
     }
-    console.log("Showing cumulated attention on objects"); 
+    console.log("Showing cumulated attention on objects");
   }
 
   resetExperimentData() {
     this.resetAttentionToAllPoints();
     this.resetColorsOnAllPoints();
-    console.log("Collected data reset!"); 
+    console.log("Collected data reset!");
   }
 
 
@@ -1014,13 +1021,13 @@ class Visualization {
 
   toggleDeemphasis() {
     this.params.allowDeemphasis = !this.params.allowDeemphasis;
-    console.log("Deemphasizing is", this.params.allowDeemphasis); 
+    console.log("Deemphasizing is", this.params.allowDeemphasis);
   }
 
 
   toggleEmphasis() {
     this.params.allowEmphasis = !this.params.allowEmphasis;
-    console.log("Emphasizing is", this.params.allowEmphasis); 
+    console.log("Emphasizing is", this.params.allowEmphasis);
   }
 }
 

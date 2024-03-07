@@ -17,7 +17,8 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
 // WebXR stuff
 import { ARButton } from 'three/addons/webxr/ARButton.js';
-
+import { HTMLMesh } from 'three/addons/interactive/HTMLMesh.js';
+import { InteractiveGroup } from 'three/addons/interactive/InteractiveGroup.js';
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
@@ -51,6 +52,8 @@ var mouse = new THREE.Vector2();
 const width = window.innerWidth;
 const height = window.innerHeight;
 
+let params; 
+
 var screenBuffer;
 let facesMaxAttention = 0;
 let facesAttentionStore = [];
@@ -82,6 +85,10 @@ var liveUpdate = false;
 
 
 
+// WebXR stuff 
+let controller;
+let gui; 
+
 
 // These are for showing that it works and should be removed as some point. 
 var yellowmessage;
@@ -93,21 +100,35 @@ var frustummessage;
 
 class Visualization {
 
+  centerRow;
+  centerColumn;
+  radius;
+  radiusSquared;
+
   params = {
     x: 0,
     y: 0,
     z: 0,
-    areaPickSize: 501, //should be an odd number!!
-    allowDeemphasis: true,
-    allowEmphasis: true
+    areaPickSize: 101, //should be an odd number!!
+    Start: function() {},
+    Stop: function () {},
+    Show_Results: function () {},
+    Reset: function () {},
+    LiveUpdate: false,
+    AllowDeemphasis: true, 
+    AllowEmphasis: true, 
+    resetColors: function () {}
   };
 
-  centerRow = Math.floor((this.params.areaPickSize) / 2);
-  centerColumn = Math.floor((this.params.areaPickSize) / 2);
-  radius = this.params.areaPickSize / 2;
-  radiusSquared = this.radius * this.radius;
-
   constructor(container) {
+
+    
+
+    this.centerRow = Math.floor((this.params.areaPickSize) / 2);
+    this.centerColumn = Math.floor((this.params.areaPickSize) / 2);
+    this.radius = this.params.areaPickSize / 2;
+    this.radiusSquared = this.radius * this.radius;
+
     camera = createCamera();
     // camera = createOrthograpichCamera(width, height);
     renderer = createRenderer();
@@ -162,6 +183,11 @@ class Visualization {
      */
     document.body.appendChild(ARButton.createButton(renderer));
     renderer.xr.enabled = true;
+
+    // Controller for the handheld controller 
+    controller = renderer.xr.getController( 0 );
+    controller.addEventListener( 'move', this.onMouseMove );
+    scene.add( controller );
 
   }
 
@@ -229,8 +255,55 @@ class Visualization {
     } // for
   }
 
+  makeGUI() {
+    gui = new GUI();
+    const folder = gui.addFolder('Dataset properties');
+    folder.add(this.params, 'x');
+    folder.add(this.params, 'y');
+    folder.add(this.params, 'z');
+    folder.close();
+    const areaPick = gui.add(this.params, 'areaPickSize', 11, 501, 10);
+    areaPick.name("Size of gaze area (px Ø)")
+    areaPick.onFinishChange(function (v) {
+      console.log('The picking size is now ' + v);
+      this.params.areaPickSize = v; 
+      this.calculatePickingArea(); 
+    });
+  
+    const expSettings = gui.addFolder('Experiment Settings');
+    expSettings.add(this.params, 'Start').name("Start data collection").onChange(this.startExperiment());
+    expSettings.add(this.params, 'Stop').name("Stop data collection").onChange(this.stopExperiment());
+    expSettings.add(this.params, 'Show_Results').name("Show cumulative attention").onChange(this.showExperimentResults());
+    expSettings.add(this.params, 'Reset').name("Reset/discard collected data").onChange(this.resetExperimentData());
+    expSettings.add(this.params, "LiveUpdate").name("Show realtime cumulative attention").onChange( value => {
+      this.toggleLiveUpdate(value);
+    } );
+    expSettings.add(this.params, "AllowDeemphasis").name("Allow deemphasis of points").onChange( value => {
+      this.toggleDeemphasis(value);
+    } );
+    expSettings.add(this.params, "AllowEmphasis").name("Allow emphasis of points").onChange( value => {
+      this.toggleEmphasis(value);
+    } );
+    expSettings.add(this.params, 'resetColors').name("Reset colours of the visualization").onChange(this.resetColorsOnAllPoints()); 
+
+    gui.open();
+    gui.domElement.style.visibility = 'visible';
+
+    const group = new InteractiveGroup( renderer, camera );
+    scene.add( group );
+
+    const mesh = new HTMLMesh( gui.domElement );
+    mesh.position.x = - 0.75;
+    mesh.position.y = 1.5;
+    mesh.position.z = - 0.5;
+    mesh.rotation.y = Math.PI / 4;
+    mesh.scale.setScalar( 2 );
+    group.add( mesh );
+  }
+
 
   start() {
+    this.makeGUI(); 
     this.init();
     this.render();
     this.animate();

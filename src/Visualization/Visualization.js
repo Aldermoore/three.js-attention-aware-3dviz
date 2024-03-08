@@ -29,7 +29,7 @@ import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 
-
+let vizContainer; 
 let camera;
 let renderer;
 let scene;
@@ -122,6 +122,8 @@ class Visualization {
   };
 
   constructor(container) {
+
+    vizContainer = container; 
 
     
 
@@ -300,11 +302,11 @@ class Visualization {
     group.add( mesh );
 
     stats = new Stats();
-    container.appendChild(stats.dom);
+    vizContainer.appendChild(stats.dom);
     stats.dom.style.width = '80px';
     stats.dom.style.height = '48px';
 
-    statsMesh = new HTMLMesh( stats.dom );
+    const statsMesh = new HTMLMesh( stats.dom );
     statsMesh.position.x = - 0.75;
     statsMesh.position.y = 2;
     statsMesh.position.z = - 0.6;

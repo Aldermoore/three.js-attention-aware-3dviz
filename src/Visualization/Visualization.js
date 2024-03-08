@@ -52,7 +52,6 @@ var mouse = new THREE.Vector2();
 const width = window.innerWidth;
 const height = window.innerHeight;
 
-let params; 
 
 var screenBuffer;
 let facesMaxAttention = 0;
@@ -98,6 +97,23 @@ var hovermessage;
 var frustummessage;
 
 
+const params = {
+  x: 0,
+  y: 0,
+  z: 0,
+  areaPickSize: 101, //should be an odd number!!
+  Start: function() {},
+  Stop: function () {},
+  Show_Results: function () {},
+  Reset: function () {},
+  LiveUpdate: true,
+  AllowDeemphasis: true, 
+  AllowEmphasis: true, 
+  resetColors: function () {}
+};
+
+var viz; 
+
 
 class Visualization {
 
@@ -106,30 +122,17 @@ class Visualization {
   radius;
   radiusSquared;
 
-  params = {
-    x: 0,
-    y: 0,
-    z: 0,
-    areaPickSize: 101, //should be an odd number!!
-    Start: function() {},
-    Stop: function () {},
-    Show_Results: function () {},
-    Reset: function () {},
-    LiveUpdate: true,
-    AllowDeemphasis: true, 
-    AllowEmphasis: true, 
-    resetColors: function () {}
-  };
 
   constructor(container) {
 
     vizContainer = container; 
+    viz = this; 
 
     
 
-    this.centerRow = Math.floor((this.params.areaPickSize) / 2);
-    this.centerColumn = Math.floor((this.params.areaPickSize) / 2);
-    this.radius = this.params.areaPickSize / 2;
+    this.centerRow = Math.floor((params.areaPickSize) / 2);
+    this.centerColumn = Math.floor((params.areaPickSize) / 2);
+    this.radius = params.areaPickSize / 2;
     this.radiusSquared = this.radius * this.radius;
 
     camera = createCamera();
@@ -151,7 +154,7 @@ class Visualization {
 
     pickingScene = new THREE.Scene();
     pickingTextureHover = new THREE.WebGLRenderTarget(1, 1);
-    pickingTextureAreaHover = new THREE.WebGLRenderTarget(this.params.areaPickSize, this.params.areaPickSize);
+    pickingTextureAreaHover = new THREE.WebGLRenderTarget(params.areaPickSize, params.areaPickSize);
     pickingTextureOcclusion = new THREE.WebGLRenderTarget(width, height);
     pickingMaterial = new THREE.MeshBasicMaterial({
       vertexColors: true
@@ -259,33 +262,33 @@ class Visualization {
   makeGUI() {
     gui = new GUI();
     const folder = gui.addFolder('Dataset properties');
-    folder.add(this.params, 'x');
-    folder.add(this.params, 'y');
-    folder.add(this.params, 'z');
+    folder.add(params, 'x');
+    folder.add(params, 'y');
+    folder.add(params, 'z');
     folder.close();
-    const areaPick = gui.add(this.params, 'areaPickSize', 11, 501, 10);
+    const areaPick = gui.add(params, 'areaPickSize', 11, 501, 10);
     areaPick.name("Size of gaze area (px Ø)")
     areaPick.onFinishChange(function (v) {
       console.log('The picking size is now ' + v);
-      this.params.areaPickSize = v; 
-      this.calculatePickingArea(); 
+      params.areaPickSize = v; 
+      viz.calculatePickingArea(); // calculatePickingArea(); 
     });
   
     const expSettings = gui.addFolder('Experiment Settings');
-    expSettings.add(this.params, 'Start').name("Start data collection").onChange(this.startExperiment());
-    expSettings.add(this.params, 'Stop').name("Stop data collection").onChange(this.stopExperiment());
-    expSettings.add(this.params, 'Show_Results').name("Show cumulative attention").onChange(this.showExperimentResults());
-    expSettings.add(this.params, 'Reset').name("Reset/discard collected data").onChange(this.resetExperimentData());
-    expSettings.add(this.params, "LiveUpdate").name("Show realtime cumulative attention").onChange( value => {
+    expSettings.add(params, 'Start').name("Start data collection").onChange(viz.startExperiment());
+    expSettings.add(params, 'Stop').name("Stop data collection").onChange(this.stopExperiment());
+    expSettings.add(params, 'Show_Results').name("Show cumulative attention").onChange(this.showExperimentResults());
+    expSettings.add(params, 'Reset').name("Reset/discard collected data").onChange(this.resetExperimentData());
+    expSettings.add(params, "LiveUpdate").name("Show realtime cumulative attention").onChange( value => {
       this.toggleLiveUpdate(value);
     } );
-    expSettings.add(this.params, "AllowDeemphasis").name("Allow deemphasis of points").onChange( value => {
+    expSettings.add(params, "AllowDeemphasis").name("Allow deemphasis of points").onChange( value => {
       this.toggleDeemphasis(value);
     } );
-    expSettings.add(this.params, "AllowEmphasis").name("Allow emphasis of points").onChange( value => {
+    expSettings.add(params, "AllowEmphasis").name("Allow emphasis of points").onChange( value => {
       this.toggleEmphasis(value);
     } );
-    expSettings.add(this.params, 'resetColors').name("Reset colours of the visualization").onChange(this.resetColorsOnAllPoints()); 
+    expSettings.add(params, 'resetColors').name("Reset colours of the visualization").onChange(this.resetColorsOnAllPoints()); 
 
     gui.open();
     gui.domElement.style.visibility = 'hidden';
@@ -295,10 +298,10 @@ class Visualization {
 
     const mesh = new HTMLMesh( gui.domElement );
     mesh.position.x = -0.75;
-    mesh.position.y = 1.5;
+    mesh.position.y = 0;
     mesh.position.z = -0.5;
     mesh.rotation.y = Math.PI / 4;
-    mesh.scale.setScalar( 2 );
+    // mesh.scale.setScalar( 2 );
     group.add( mesh );
 
     stats = new Stats();
@@ -308,10 +311,10 @@ class Visualization {
 
     const statsMesh = new HTMLMesh( stats.dom );
     statsMesh.position.x = - 0.75;
-    statsMesh.position.y = 2;
+    statsMesh.position.y = 0.5;
     statsMesh.position.z = - 0.6;
     statsMesh.rotation.y = Math.PI / 4;
-    statsMesh.scale.setScalar( 2.5 );
+    // statsMesh.scale.setScalar( 2.5 );
     group.add( statsMesh );
   }
 
@@ -354,12 +357,12 @@ class Visualization {
         // console.log(tempObjectAttentionStore);
         for (const element of dataPoints.children) {
 
-          if (this.params.allowDeemphasis && tempObjectAttentionStore[element.name] > deemphasizeThreshold) { // check if point needs to be deemphasised
+          if (params.allowDeemphasis && tempObjectAttentionStore[element.name] > deemphasizeThreshold) { // check if point needs to be deemphasised
             triggeredStore[element.name] = true;
             // deemphasizing 
             element.material.color.lerp(new THREE.Color("#555555"), 0.05);
 
-          } else if (this.params.allowEmphasis && tempObjectAttentionStore[element.name] < emphasizeThreshold) { // check if point needs to be emphasised 
+          } else if (params.allowEmphasis && tempObjectAttentionStore[element.name] < emphasizeThreshold) { // check if point needs to be emphasised 
 
             triggeredStore[element.name] = true;
             // emphasize
@@ -545,7 +548,7 @@ class Visualization {
 
 
   isHoveringAreaBuffer(buffer) {
-    let subBuffer = this.findAreaFromArray(buffer, this.params.areaPickSize, mousePick.x, mousePick.y);
+    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, width/2, height/2 ); // mousePick.x, mousePick.y);
     return subBuffer;
   }
 
@@ -722,10 +725,10 @@ class Visualization {
 
 
   calculatePickingArea() {
-    this.centerRow = Math.floor((this.params.areaPickSize) / 2);
-    this.centerColumn = Math.floor((this.params.areaPickSize) / 2);
-    pickingTextureAreaHover = new THREE.WebGLRenderTarget(this.params.areaPickSize, this.params.areaPickSize);
-    console.log("The Viz' picking area is now ", this.params.areaPickSize);
+    this.centerRow = Math.floor((params.areaPickSize) / 2);
+    this.centerColumn = Math.floor((params.areaPickSize) / 2);
+    pickingTextureAreaHover = new THREE.WebGLRenderTarget(params.areaPickSize, params.areaPickSize);
+    console.log("The Viz' picking area is now ", params.areaPickSize);
   }
 
 
@@ -739,7 +742,7 @@ class Visualization {
         tempBuffer.push(buffer[i]);
       }
       col++;
-      if (col >= this.params.areaPickSize) {
+      if (col >= params.areaPickSize) {
         col = 0;
         row++;
       }
@@ -1108,14 +1111,14 @@ class Visualization {
 
 
   toggleDeemphasis() {
-    this.params.allowDeemphasis = !this.params.allowDeemphasis;
-    console.log("Deemphasizing is", this.params.allowDeemphasis);
+    params.allowDeemphasis = !params.allowDeemphasis;
+    console.log("Deemphasizing is", params.allowDeemphasis);
   }
 
 
   toggleEmphasis() {
-    this.params.allowEmphasis = !this.params.allowEmphasis;
-    console.log("Emphasizing is", this.params.allowEmphasis);
+    params.allowEmphasis = !params.allowEmphasis;
+    console.log("Emphasizing is", params.allowEmphasis);
   }
 }
 

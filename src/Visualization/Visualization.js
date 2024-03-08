@@ -175,8 +175,6 @@ class Visualization {
     resizer.onResize = () => {
       this.render(); // Technically not needed if we just constantly rerender each frame. 
     }
-    stats = new Stats();
-    container.appendChild(stats.dom);
 
 
     /**
@@ -288,18 +286,31 @@ class Visualization {
     expSettings.add(this.params, 'resetColors').name("Reset colours of the visualization").onChange(this.resetColorsOnAllPoints()); 
 
     gui.open();
-    gui.domElement.style.visibility = 'visible';
+    gui.domElement.style.visibility = 'hidden';
 
     group = new InteractiveGroup( renderer, camera );
     scene.add( group );
 
     const mesh = new HTMLMesh( gui.domElement );
-    mesh.position.x = 0;
-    mesh.position.y = 0;
-    mesh.position.z = 0;
-    // mesh.rotation.y = Math.PI / 4;
+    mesh.position.x = -0.75;
+    mesh.position.y = 1.5;
+    mesh.position.z = -0.5;
+    mesh.rotation.y = Math.PI / 4;
     mesh.scale.setScalar( 2 );
     group.add( mesh );
+
+    stats = new Stats();
+    container.appendChild(stats.dom);
+    stats.dom.style.width = '80px';
+    stats.dom.style.height = '48px';
+
+    statsMesh = new HTMLMesh( stats.dom );
+    statsMesh.position.x = - 0.75;
+    statsMesh.position.y = 2;
+    statsMesh.position.z = - 0.6;
+    statsMesh.rotation.y = Math.PI / 4;
+    statsMesh.scale.setScalar( 2.5 );
+    group.add( statsMesh );
   }
 
 

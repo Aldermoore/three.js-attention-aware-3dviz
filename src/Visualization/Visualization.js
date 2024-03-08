@@ -293,9 +293,9 @@ class Visualization {
     scene.add( group );
 
     const mesh = new HTMLMesh( gui.domElement );
-    mesh.position.x = - 0.75;
+    mesh.position.x = 0;
     mesh.position.y = 1.5;
-    mesh.position.z = - 0.5;
+    mesh.position.z = 0;
     mesh.rotation.y = Math.PI / 4;
     mesh.scale.setScalar( 2 );
     group.add( mesh );

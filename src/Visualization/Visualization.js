@@ -80,14 +80,15 @@ const colorScale = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3
 var attentionList;
 
 
-let experimentStarted = false;
-var liveUpdate = false;
+let experimentStarted = true;
+var liveUpdate = true;
 
 
 
 // WebXR stuff 
 let controller;
 let gui; 
+let group; 
 
 
 // These are for showing that it works and should be removed as some point. 
@@ -114,7 +115,7 @@ class Visualization {
     Stop: function () {},
     Show_Results: function () {},
     Reset: function () {},
-    LiveUpdate: false,
+    LiveUpdate: true,
     AllowDeemphasis: true, 
     AllowEmphasis: true, 
     resetColors: function () {}
@@ -289,14 +290,14 @@ class Visualization {
     gui.open();
     gui.domElement.style.visibility = 'visible';
 
-    const group = new InteractiveGroup( renderer, camera );
+    group = new InteractiveGroup( renderer, camera );
     scene.add( group );
 
     const mesh = new HTMLMesh( gui.domElement );
-    mesh.position.x = 0;
-    mesh.position.y = 1.5;
-    mesh.position.z = 0;
-    mesh.rotation.y = Math.PI / 4;
+    mesh.position.x = - 1;
+    mesh.position.y = 0;
+    mesh.position.z = - 1;
+    // mesh.rotation.y = Math.PI / 4;
     mesh.scale.setScalar( 2 );
     group.add( mesh );
   }

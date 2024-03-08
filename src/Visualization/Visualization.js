@@ -9,7 +9,7 @@ import { Resizer } from './systems/Resizer.js';
 import { Loop } from './systems/Loop.js';
 import { createControls } from './systems/controls.js'
 import iris from './data/iris.json' assert {type: 'json'}; //Our data
-import { ViewHelper } from './components/viewHelper.js';
+// import { ViewHelper } from './components/viewHelper.js';
 // THREEjs libraries 
 import TWEEN from '@tweenjs/tween.js'
 
@@ -34,7 +34,7 @@ let camera;
 let renderer;
 let scene;
 let loop;
-let viewHelper;
+// let viewHelper;
 let stats;
 
 let dataPoints;
@@ -164,7 +164,7 @@ class Visualization {
 
     const controls = createControls(camera, renderer.domElement);
     const { ambientLight, mainLight } = createLights();
-    viewHelper = new ViewHelper(camera, container, controls);
+    // viewHelper = new ViewHelper(camera, container, controls);
 
 
     scene.add(ambientLight, mainLight);
@@ -317,12 +317,12 @@ class Visualization {
 
   render() {
     // draw a single frame
-    renderer.setViewport(0, 0, renderer.domElement?.offsetWidth, renderer.domElement?.offsetHeight);
+    // renderer.setViewport(0, 0, renderer.domElement?.offsetWidth, renderer.domElement?.offsetHeight);
     renderer.render(scene, camera);
-    renderer.autoClear = false;
-    viewHelper.render(renderer);
-    renderer.autoClear = true;
-    TWEEN.update();
+    // renderer.autoClear = false;
+    // // viewHelper.render(renderer);
+    // renderer.autoClear = true;
+    // TWEEN.update();
   }
 
 

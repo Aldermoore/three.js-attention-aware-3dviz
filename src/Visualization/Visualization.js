@@ -29,7 +29,7 @@ import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 
-let vizContainer; 
+let vizContainer;
 let camera;
 let renderer;
 let scene;
@@ -86,8 +86,8 @@ var liveUpdate = false;
 
 // WebXR stuff 
 let controller;
-let gui; 
-let group; 
+let gui;
+let group;
 
 
 // These are for showing that it works and should be removed as some point. 
@@ -96,7 +96,7 @@ var tealmessage;
 var hovermessage;
 var frustummessage;
 
-var visibleObjectsDiv; 
+var visibleObjectsDiv;
 
 
 const params = {
@@ -104,17 +104,17 @@ const params = {
   y: 0,
   z: 0,
   areaPickSize: 501, //should be an odd number!!
-  Start: function() {},
-  Stop: function () {},
-  Show_Results: function () {},
-  Reset: function () {},
+  Start: function () { },
+  Stop: function () { },
+  Show_Results: function () { },
+  Reset: function () { },
   LiveUpdate: true,
-  AllowDeemphasis: true, 
-  AllowEmphasis: true, 
-  resetColors: function () {}
+  AllowDeemphasis: true,
+  AllowEmphasis: true,
+  resetColors: function () { }
 };
 
-var viz; 
+var viz;
 
 
 class Visualization {
@@ -127,10 +127,10 @@ class Visualization {
 
   constructor(container) {
 
-    vizContainer = container; 
-    viz = this; 
+    vizContainer = container;
+    viz = this;
 
-    
+
 
     this.centerRow = Math.floor((params.areaPickSize) / 2);
     this.centerColumn = Math.floor((params.areaPickSize) / 2);
@@ -191,9 +191,9 @@ class Visualization {
     renderer.xr.enabled = true;
 
     // Controller for the handheld controller 
-    controller = renderer.xr.getController( 0 );
-    controller.addEventListener( 'move', this.onMouseMove );
-    scene.add( controller );
+    controller = renderer.xr.getController(0);
+    controller.addEventListener('move', this.onMouseMove);
+    scene.add(controller);
 
   }
 
@@ -270,7 +270,7 @@ class Visualization {
     // visibleObjectsDiv.rotation.y = Math.PI / 2;
     // // mesh.scale.setScalar( 2 );
     // group.add( visibleObjectsDiv ); 
-    
+
   }
 
   makeGUI() {
@@ -284,62 +284,62 @@ class Visualization {
     areaPick.name("Size of gaze area (px Ø)")
     areaPick.onFinishChange(function (v) {
       console.log('The picking size is now ' + v);
-      params.areaPickSize = v; 
+      params.areaPickSize = v;
       viz.calculatePickingArea(); // calculatePickingArea(); 
     });
-  
+
     const expSettings = gui.addFolder('Experiment Settings');
     expSettings.add(params, 'Start').name("Start data collection").onChange(viz.startExperiment());
     expSettings.add(params, 'Stop').name("Stop data collection").onChange(this.stopExperiment());
     expSettings.add(params, 'Show_Results').name("Show cumulative attention").onChange(this.showExperimentResults());
     expSettings.add(params, 'Reset').name("Reset/discard collected data").onChange(this.resetExperimentData());
-    expSettings.add(params, "LiveUpdate").name("Show realtime cumulative attention").onFinishChange( value => {
+    expSettings.add(params, "LiveUpdate").name("Show realtime cumulative attention").onFinishChange(value => {
       this.toggleLiveUpdate(value);
-    } );
-    expSettings.add(params, "AllowDeemphasis").name("Allow deemphasis of points").onChange( value => {
+    });
+    expSettings.add(params, "AllowDeemphasis").name("Allow deemphasis of points").onChange(value => {
       this.toggleDeemphasis(value);
-    } );
-    expSettings.add(params, "AllowEmphasis").name("Allow emphasis of points").onChange( value => {
+    });
+    expSettings.add(params, "AllowEmphasis").name("Allow emphasis of points").onChange(value => {
       this.toggleEmphasis(value);
-    } );
-    expSettings.add(params, 'resetColors').name("Reset colours of the visualization").onChange(this.resetColorsOnAllPoints()); 
+    });
+    expSettings.add(params, 'resetColors').name("Reset colours of the visualization").onChange(this.resetColorsOnAllPoints());
 
     gui.open();
     gui.domElement.style.visibility = 'hidden';
 
-    group = new InteractiveGroup( renderer, camera );
-    scene.add( group );
+    group = new InteractiveGroup(renderer, camera);
+    scene.add(group);
 
-    const mesh = new HTMLMesh( gui.domElement );
+    const mesh = new HTMLMesh(gui.domElement);
     mesh.position.x = -0.75;
     mesh.position.y = 0;
     mesh.position.z = -0.5;
     mesh.rotation.y = Math.PI / 4;
     // mesh.scale.setScalar( 2 );
-    group.add( mesh );
+    group.add(mesh);
 
     stats = new Stats();
     vizContainer.appendChild(stats.dom);
     stats.dom.style.width = '80px';
     stats.dom.style.height = '48px';
 
-    const statsMesh = new HTMLMesh( stats.dom );
+    const statsMesh = new HTMLMesh(stats.dom);
     statsMesh.position.x = - 0.75;
     statsMesh.position.y = 0.5;
     statsMesh.position.z = - 0.6;
     statsMesh.rotation.y = Math.PI / 4;
     // statsMesh.scale.setScalar( 2.5 );
-    group.add( statsMesh );
+    group.add(statsMesh);
   }
 
 
   start() {
-    this.makeGUI(); 
+    this.makeGUI();
     this.init();
     this.render();
     this.animate();
-    this.toggleLiveUpdate(); 
-    this.startExperiment(); 
+    this.toggleLiveUpdate();
+    this.startExperiment();
   }
 
 
@@ -417,8 +417,8 @@ class Visualization {
 
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    width = window.innerWidth; 
-    height = window.innerHeight; 
+    width = window.innerWidth;
+    height = window.innerHeight;
 
     pickingTextureOcclusion = new THREE.WebGLRenderTarget(width, height);
 
@@ -569,20 +569,40 @@ class Visualization {
 
 
   isHoveringAreaBuffer(buffer) {
-    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, height / 2, width / 2 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
+    let subBuffer = [];
+    let session = renderer.xr.getSession(); 
+    if (session && renderer.xr.isPresenting) {
+      session.requestAnimationFrame(() => {
+        // Access the baseLayer of the render
+        const baseLayer = session.renderState.baseLayer;
+        // Log each view (eye)'s viewport size
+        baseLayer.getViewport = baseLayer.getViewport;
+        if (baseLayer.getViewport) { // if viewport exists
+          const views = session.renderState.layers[0].views;
+          views.forEach((view, index) => {
+            const viewport = baseLayer.getViewport(view);
+            // console.log(Viewport ${index}: width = ${viewport.width}, height = ${viewport.height});
+          subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, viewport.width, viewport.height / 2); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
+          });
+
+        }
+      });
+    } else {
+      subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, width / 2, height / 2); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
+    }
     return subBuffer;
   }
 
 
   isHoveringAreaBufferStandalone() {
-    camera.setViewOffset( renderer.domElement.width, 
-                          renderer.domElement.height, 
-                          renderer.domElement.width/2 - (this.params.areaPickSize / 2) | 0,
-                          0, 
-                          // mousePick.x * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
-                          // mousePick.y * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
-                          this.params.areaPickSize, 
-                          this.params.areaPickSize );
+    camera.setViewOffset(renderer.domElement.width,
+      renderer.domElement.height,
+      renderer.domElement.width / 2 - (this.params.areaPickSize / 2) | 0,
+      0,
+      // mousePick.x * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
+      // mousePick.y * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
+      this.params.areaPickSize,
+      this.params.areaPickSize);
     renderer.setRenderTarget(pickingTextureAreaHover);
     renderer.render(pickingScene, camera);
     camera.clearViewOffset();
@@ -590,7 +610,7 @@ class Visualization {
     renderer.readRenderTargetPixels(pickingTextureAreaHover, 0, 0, this.params.areaPickSize, this.params.areaPickSize, pixelBuffer);
     var hexBuffer = this.rgbaToHex(pixelBuffer);
     renderer.setRenderTarget(null);
-    return hexBuffer; 
+    return hexBuffer;
   }
 
 
@@ -1086,7 +1106,6 @@ class Visualization {
       let circleBuffer = this.circleFromSquareBuffer(subBuffer);
       this.addAttentionToFaces(circleBuffer);
       this.increaseAttentionToPoint(circleBuffer);
-      let list = new Set(screenBuffer); 
     }, attentionIntervalMS);
     decayID = setInterval(() => {
       this.decayTempAttention();

@@ -651,7 +651,7 @@ class Visualization {
 
 
   findAreaFromArray(array, squareSize, xCor, yCor) {
-    yCor = Math.abs(yCor - 1760); // reversing the Y-coordinate
+    yCor = Math.abs(yCor - height); // reversing the Y-coordinate
     let row = 0;
     let column = 0;
     let startRow = Math.ceil(yCor - squareSize / 2);

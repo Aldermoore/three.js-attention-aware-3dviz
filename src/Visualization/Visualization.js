@@ -351,7 +351,7 @@ class Visualization {
   render() {
     // draw a single frame
     // renderer.setViewport(0, 0, renderer.domElement?.offsetWidth, renderer.domElement?.offsetHeight);
-    renderer.render(pickingScene, camera);
+    renderer.render(scene, camera);
     // renderer.autoClear = false;
     // // viewHelper.render(renderer);
     // renderer.autoClear = true;
@@ -555,7 +555,7 @@ class Visualization {
     renderer.setRenderTarget(pickingTextureOcclusion);
     renderer.render(pickingScene, camera);
     var pixelBuffer = new Uint8Array(renderer.domElement.width * renderer.domElement.height * 4);
-    renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, width, height, pixelBuffer); // width, height 
+    renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, renderer.domElement.width, renderer.domElement.height, pixelBuffer); // width, height 
     renderer.setRenderTarget(null);
     var hexBuffer = this.rgbaToHex(pixelBuffer);
 
@@ -569,7 +569,7 @@ class Visualization {
 
 
   isHoveringAreaBuffer(buffer) {
-    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, 1000, 1200 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760
+    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, renderer.domElement.width / 2, renderer.domElement.height / 2 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
     return subBuffer;
   }
 

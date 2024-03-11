@@ -578,7 +578,7 @@ class Visualization {
     camera.setViewOffset( renderer.domElement.width, 
                           renderer.domElement.height, 
                           renderer.domElement.width/2 - (this.params.areaPickSize / 2) | 0,
-                          renderer.domElement.height/4 - (this.params.areaPickSize / 2) | 0, 
+                          200, 
                           // mousePick.x * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
                           // mousePick.y * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
                           this.params.areaPickSize, 

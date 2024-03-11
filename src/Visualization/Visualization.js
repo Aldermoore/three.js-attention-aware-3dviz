@@ -554,7 +554,7 @@ class Visualization {
   checkForOcclusion() {
     renderer.setRenderTarget(pickingTextureOcclusion);
     renderer.render(pickingScene, camera);
-    var pixelBuffer = new Uint8Array(width * height * 4);
+    var pixelBuffer = new Uint8Array(renderer.domElement.width * renderer.domElement.height * 4);
     renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, width, height, pixelBuffer); // width, height 
     renderer.setRenderTarget(null);
     var hexBuffer = this.rgbaToHex(pixelBuffer);

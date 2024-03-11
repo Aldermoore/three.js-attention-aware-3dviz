@@ -351,7 +351,7 @@ class Visualization {
   render() {
     // draw a single frame
     // renderer.setViewport(0, 0, renderer.domElement?.offsetWidth, renderer.domElement?.offsetHeight);
-    renderer.render(scene, camera);
+    renderer.render(pickingScene, camera);
     // renderer.autoClear = false;
     // // viewHelper.render(renderer);
     // renderer.autoClear = true;
@@ -1081,13 +1081,12 @@ class Visualization {
     console.log("Data collection started!");
     experimentStarted = true;
     attentionID = setInterval(() => {
-      // let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
-      let subBuffer = this.isHoveringAreaBufferStandalone(); 
+      let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
+      // let subBuffer = this.isHoveringAreaBufferStandalone(); 
       let circleBuffer = this.circleFromSquareBuffer(subBuffer);
       this.addAttentionToFaces(circleBuffer);
       this.increaseAttentionToPoint(circleBuffer);
       let list = new Set(screenBuffer); 
-      console.log(list);
     }, attentionIntervalMS);
     decayID = setInterval(() => {
       this.decayTempAttention();

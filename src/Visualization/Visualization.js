@@ -137,7 +137,7 @@ class Visualization {
     this.radius = params.areaPickSize / 2;
     this.radiusSquared = this.radius * this.radius;
 
-    camera = createCamera();
+    camera = createCamera(window);
     // camera = createOrthograpichCamera(width, height);
     renderer = createRenderer();
     scene = createScene();

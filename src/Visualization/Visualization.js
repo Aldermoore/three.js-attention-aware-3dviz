@@ -555,7 +555,7 @@ class Visualization {
     renderer.setRenderTarget(pickingTextureOcclusion);
     renderer.render(pickingScene, camera);
     var pixelBuffer = new Uint8Array(width * height * 4);
-    renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, 1680, 1760, pixelBuffer); // width, height 
+    renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, width, height, pixelBuffer); // width, height 
     renderer.setRenderTarget(null);
     var hexBuffer = this.rgbaToHex(pixelBuffer);
 
@@ -571,6 +571,26 @@ class Visualization {
   isHoveringAreaBuffer(buffer) {
     let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, 1000, 0 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760
     return subBuffer;
+  }
+
+
+  isHoveringAreaBufferStandalone() {
+    camera.setViewOffset( renderer.domElement.width, 
+                          renderer.domElement.height, 
+                          width/2,
+                          height/2, 
+                          // mousePick.x * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
+                          // mousePick.y * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
+                          this.params.areaPickSize, 
+                          this.params.areaPickSize );
+    renderer.setRenderTarget(pickingTextureAreaHover);
+    renderer.render(pickingScene, camera);
+    camera.clearViewOffset();
+    var pixelBuffer = new Uint8Array(this.params.areaPickSize * this.params.areaPickSize * 4);
+    renderer.readRenderTargetPixels(pickingTextureAreaHover, 0, 0, this.params.areaPickSize, this.params.areaPickSize, pixelBuffer);
+    var hexBuffer = this.rgbaToHex(pixelBuffer);
+    renderer.setRenderTarget(null);
+    return hexBuffer; 
   }
 
 
@@ -1061,7 +1081,8 @@ class Visualization {
     console.log("Data collection started!");
     experimentStarted = true;
     attentionID = setInterval(() => {
-      let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
+      // let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
+      let subBuffer = this.isHoveringAreaBufferStandalone(); 
       let circleBuffer = this.circleFromSquareBuffer(subBuffer);
       this.addAttentionToFaces(circleBuffer);
       this.increaseAttentionToPoint(circleBuffer);

@@ -419,6 +419,9 @@ class Visualization {
 
     width = window.innerWidth; 
     height = window.innerHeight; 
+
+    pickingTextureOcclusion = new THREE.WebGLRenderTarget(width, height);
+
   }
 
 

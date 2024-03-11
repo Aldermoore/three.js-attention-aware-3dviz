@@ -49,8 +49,8 @@ var mousePick = new THREE.Vector2();
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 
-const width = window.innerWidth;
-const height = window.innerHeight;
+var width = window.innerWidth;
+var height = window.innerHeight;
 
 
 var screenBuffer;
@@ -554,8 +554,8 @@ class Visualization {
   checkForOcclusion() {
     renderer.setRenderTarget(pickingTextureOcclusion);
     renderer.render(pickingScene, camera);
-    var pixelBuffer = new Uint8Array(renderer.domElement.width * renderer.domElement.height * 4);
-    renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, renderer.domElement.width, renderer.domElement.height, pixelBuffer); // width, height 
+    var pixelBuffer = new Uint8Array(width * height * 4);
+    renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, width, height, pixelBuffer); // width, height 
     renderer.setRenderTarget(null);
     var hexBuffer = this.rgbaToHex(pixelBuffer);
 
@@ -569,7 +569,7 @@ class Visualization {
 
 
   isHoveringAreaBuffer(buffer) {
-    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, renderer.domElement.width / 2, renderer.domElement.height / 2 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
+    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, width / 2, height / 2 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
     return subBuffer;
   }
 

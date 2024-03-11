@@ -577,8 +577,8 @@ class Visualization {
   isHoveringAreaBufferStandalone() {
     camera.setViewOffset( renderer.domElement.width, 
                           renderer.domElement.height, 
-                          0,
-                          0, 
+                          renderer.domElement.width/2 - (this.params.areaPickSize / 2) | 0,
+                          renderer.domElement.height/2 - (this.params.areaPickSize / 2) | 0, 
                           // mousePick.x * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
                           // mousePick.y * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
                           this.params.areaPickSize, 

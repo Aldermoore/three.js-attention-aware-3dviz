@@ -103,7 +103,7 @@ const params = {
   x: 0,
   y: 0,
   z: 0,
-  areaPickSize: 201, //should be an odd number!!
+  areaPickSize: 501, //should be an odd number!!
   Start: function() {},
   Stop: function () {},
   Show_Results: function () {},
@@ -569,7 +569,7 @@ class Visualization {
 
 
   isHoveringAreaBuffer(buffer) {
-    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, 1000, 0 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760
+    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, 1000, 1000 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760
     return subBuffer;
   }
 
@@ -1081,8 +1081,8 @@ class Visualization {
     console.log("Data collection started!");
     experimentStarted = true;
     attentionID = setInterval(() => {
-      // let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
-      let subBuffer = this.isHoveringAreaBufferStandalone(); 
+      let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
+      // let subBuffer = this.isHoveringAreaBufferStandalone(); 
       let circleBuffer = this.circleFromSquareBuffer(subBuffer);
       this.addAttentionToFaces(circleBuffer);
       this.increaseAttentionToPoint(circleBuffer);

@@ -1,6 +1,8 @@
 {
   "devDependencies": {
-    "vite": "^5.0.11"
+    "@vitejs/plugin-basic-ssl": "^1.1.0",
+    "vite": "^5.0.11",
+    "vite-plugin-mkcert": "^1.17.4"
   },
   "dependencies": {
     "@tweenjs/tween.js": "^23.1.1",

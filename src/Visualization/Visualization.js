@@ -570,23 +570,25 @@ class Visualization {
 
   isHoveringAreaBuffer(buffer) {
     let subBuffer = [];
+    let viewPortWidth = width; 
+    let viewPortHeight = height; 
     let session = renderer.xr.getSession(); 
     if (session && renderer.xr.isPresenting) {
       session.requestAnimationFrame(() => {
         // Access the baseLayer of the render
         const baseLayer = session.renderState.baseLayer;
         // Log each view (eye)'s viewport size
-        baseLayer.getViewport = baseLayer.getViewport;
         if (baseLayer.getViewport) { // if viewport exists
           const views = session.renderState.layers[0].views;
           views.forEach((view, index) => {
             const viewport = baseLayer.getViewport(view);
             console.log("Viewport", index,": width = ",viewport.width, "height =",viewport.height);
-          subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, viewport.width / 2, viewport.height / 2); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
+            viewPortWidth = viewport.width; 
+            viewPortHeight = viewport.height; 
           });
-
         }
       });
+      subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, 1000, 0); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
     } else {
       console.log('WebXR session is not started or available.');
       subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, width / 2, height / 2); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 

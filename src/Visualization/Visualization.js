@@ -566,7 +566,7 @@ class Visualization {
 
 
   isHoveringAreaBuffer(buffer) {
-    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, 890, 840 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760
+    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, 890, height / 2 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760
     return subBuffer;
   }
 
@@ -651,7 +651,7 @@ class Visualization {
 
 
   findAreaFromArray(array, squareSize, xCor, yCor) {
-    // yCor = Math.abs(yCor - height); // reversing the Y-coordinate
+    yCor = Math.abs(yCor - 1760); // reversing the Y-coordinate
     let row = 0;
     let column = 0;
     let startRow = Math.ceil(yCor - squareSize / 2);

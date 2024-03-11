@@ -566,7 +566,7 @@ class Visualization {
 
 
   isHoveringAreaBuffer(buffer) {
-    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, width/1.5, height*4 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760
+    let subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, 840, 880 ); // mousePick.x, mousePick.y); quest 3 res: 1680x1760
     return subBuffer;
   }
 

@@ -582,7 +582,7 @@ class Visualization {
           views.forEach((view, index) => {
             const viewport = baseLayer.getViewport(view);
             // console.log(Viewport ${index}: width = ${viewport.width}, height = ${viewport.height});
-          subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, viewport.width, viewport.height / 2); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
+          subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, viewport.width / 2, viewport.height / 2); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
           });
 
         }

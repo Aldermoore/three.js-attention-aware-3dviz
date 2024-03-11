@@ -103,7 +103,7 @@ const params = {
   x: 0,
   y: 0,
   z: 0,
-  areaPickSize: 501, //should be an odd number!!
+  areaPickSize: 51, //should be an odd number!!
   Start: function () { },
   Stop: function () { },
   Show_Results: function () { },
@@ -581,7 +581,7 @@ class Visualization {
           const views = session.renderState.layers[0].views;
           views.forEach((view, index) => {
             const viewport = baseLayer.getViewport(view);
-            // console.log(Viewport ${index}: width = ${viewport.width}, height = ${viewport.height});
+            console.log("Viewport", index,": width = ",viewport.width, "height =",viewport.height);
           subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, viewport.width / 2, viewport.height / 2); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
           });
 

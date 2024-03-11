@@ -417,6 +417,8 @@ class Visualization {
 
     renderer.setSize(window.innerWidth, window.innerHeight);
 
+    width = window.innerWidth; 
+    height = window.innerHeight; 
   }
 
 

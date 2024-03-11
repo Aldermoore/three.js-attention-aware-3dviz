@@ -577,8 +577,8 @@ class Visualization {
   isHoveringAreaBufferStandalone() {
     camera.setViewOffset( renderer.domElement.width, 
                           renderer.domElement.height, 
-                          1000,
-                          500, 
+                          0,
+                          0, 
                           // mousePick.x * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
                           // mousePick.y * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
                           this.params.areaPickSize, 
@@ -1081,8 +1081,8 @@ class Visualization {
     console.log("Data collection started!");
     experimentStarted = true;
     attentionID = setInterval(() => {
-      let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
-      // let subBuffer = this.isHoveringAreaBufferStandalone(); 
+      // let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
+      let subBuffer = this.isHoveringAreaBufferStandalone(); 
       let circleBuffer = this.circleFromSquareBuffer(subBuffer);
       this.addAttentionToFaces(circleBuffer);
       this.increaseAttentionToPoint(circleBuffer);

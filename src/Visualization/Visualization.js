@@ -56,7 +56,7 @@ const height = window.innerHeight;
 var screenBuffer;
 let facesMaxAttention = 0;
 let facesAttentionStore = [];
-let bjectMaxAttention = 0;
+let objectMaxAttention = 0;
 let objectAttentionStore = [];
 
 let tempObjectAttentionStore = [];
@@ -79,8 +79,8 @@ const colorScale = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3
 var attentionList;
 
 
-let experimentStarted = true;
-var liveUpdate = true;
+let experimentStarted = false;
+var liveUpdate = false;
 
 
 
@@ -95,6 +95,8 @@ var yellowmessage;
 var tealmessage;
 var hovermessage;
 var frustummessage;
+
+var visibleObjectsDiv; 
 
 
 const params = {
@@ -257,6 +259,18 @@ class Visualization {
       this.createSphere(index + 1, color, new THREE.Vector3(xVal, yVal, zVal), 0.5);
 
     } // for
+
+
+    // visibleObjectsDiv = new HTMLMesh( hovermessage.dom );
+    // visibleObjectsDiv.height = 100;
+    // visibleObjectsDiv.width = 100; 
+    // visibleObjectsDiv.position.x = 0.75;
+    // visibleObjectsDiv.position.y = 0;
+    // visibleObjectsDiv.position.z = 0.5;
+    // visibleObjectsDiv.rotation.y = Math.PI / 2;
+    // // mesh.scale.setScalar( 2 );
+    // group.add( visibleObjectsDiv ); 
+    
   }
 
   makeGUI() {
@@ -279,7 +293,7 @@ class Visualization {
     expSettings.add(params, 'Stop').name("Stop data collection").onChange(this.stopExperiment());
     expSettings.add(params, 'Show_Results').name("Show cumulative attention").onChange(this.showExperimentResults());
     expSettings.add(params, 'Reset').name("Reset/discard collected data").onChange(this.resetExperimentData());
-    expSettings.add(params, "LiveUpdate").name("Show realtime cumulative attention").onChange( value => {
+    expSettings.add(params, "LiveUpdate").name("Show realtime cumulative attention").onFinishChange( value => {
       this.toggleLiveUpdate(value);
     } );
     expSettings.add(params, "AllowDeemphasis").name("Allow deemphasis of points").onChange( value => {
@@ -324,6 +338,8 @@ class Visualization {
     this.init();
     this.render();
     this.animate();
+    this.toggleLiveUpdate(); 
+    this.startExperiment(); 
   }
 
 
@@ -357,12 +373,12 @@ class Visualization {
         // console.log(tempObjectAttentionStore);
         for (const element of dataPoints.children) {
 
-          if (params.allowDeemphasis && tempObjectAttentionStore[element.name] > deemphasizeThreshold) { // check if point needs to be deemphasised
+          if (params.AllowDeemphasis && tempObjectAttentionStore[element.name] > deemphasizeThreshold) { // check if point needs to be deemphasised
             triggeredStore[element.name] = true;
             // deemphasizing 
             element.material.color.lerp(new THREE.Color("#555555"), 0.05);
 
-          } else if (params.allowEmphasis && tempObjectAttentionStore[element.name] < emphasizeThreshold) { // check if point needs to be emphasised 
+          } else if (params.AllowEmphasis && tempObjectAttentionStore[element.name] < emphasizeThreshold) { // check if point needs to be emphasised 
 
             triggeredStore[element.name] = true;
             // emphasize
@@ -1044,6 +1060,8 @@ class Visualization {
       let circleBuffer = this.circleFromSquareBuffer(subBuffer);
       this.addAttentionToFaces(circleBuffer);
       this.increaseAttentionToPoint(circleBuffer);
+      let list = new Set(screenBuffer); 
+      console.log(list);
     }, attentionIntervalMS);
     decayID = setInterval(() => {
       this.decayTempAttention();

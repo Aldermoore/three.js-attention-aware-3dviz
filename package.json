@@ -9,6 +9,6 @@
     "three": "^0.160.0"
   },
   "scripts": {
-    "start": "npx vite"
+    "start": "npx vite --host"
   }
 }

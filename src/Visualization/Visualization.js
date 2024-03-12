@@ -103,7 +103,7 @@ const params = {
   x: 0,
   y: 0,
   z: 0,
-  areaPickSize: 51, //should be an odd number!!
+  areaPickSize: 301, //should be an odd number!!
   Start: function () { },
   Stop: function () { },
   Show_Results: function () { },
@@ -552,12 +552,40 @@ class Visualization {
    * @returns buffer of the entire screen. Each value is the colour of the pixel as a hex-value. 
    */
   checkForOcclusion() {
-    renderer.setRenderTarget(pickingTextureOcclusion);
-    renderer.render(pickingScene, camera);
-    var pixelBuffer = new Uint8Array(width * height * 4);
-    renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, width, height, pixelBuffer); // width, height 
-    renderer.setRenderTarget(null);
-    var hexBuffer = this.rgbaToHex(pixelBuffer);
+    var hexBuffer;
+    let viewPortWidth = width;
+    let viewPortHeight = height;
+    let session = renderer.xr.getSession();
+    if (session && renderer.xr.isPresenting) {
+      session.requestAnimationFrame(() => {
+        // Access the baseLayer of the render
+        const baseLayer = session.renderState.baseLayer;
+        // Log each view (eye)'s viewport size
+        if (baseLayer.getViewport) { // if viewport exists
+          const views = session.renderState.layers[0].views;
+          views.forEach((view, index) => {
+            const viewport = baseLayer.getViewport(view);
+            console.log("Viewport", index, ": width = ", viewport.width, "height =", viewport.height);
+            viewPortWidth = viewport.width;
+            viewPortHeight = viewport.height;
+            pickingTextureOcclusion = new THREE.WebGLRenderTarget(viewPortWidth, viewPortHeight);
+          });
+        }
+      });
+      renderer.setRenderTarget(pickingTextureOcclusion);
+      renderer.render(pickingScene, camera);
+      var pixelBuffer = new Uint8Array(viewPortWidth * viewPortHeight * 4);
+      renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, viewPortWidth, viewPortHeight, pixelBuffer); // width, height 
+      renderer.setRenderTarget(null);
+      hexBuffer = this.rgbaToHex(pixelBuffer);
+    } else { // if not in XR
+      renderer.setRenderTarget(pickingTextureOcclusion);
+      renderer.render(pickingScene, camera);
+      var pixelBuffer = new Uint8Array(width * height * 4);
+      renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, width, height, pixelBuffer); // width, height 
+      renderer.setRenderTarget(null);
+      hexBuffer = this.rgbaToHex(pixelBuffer);
+    }
 
     // dataPoints.children.forEach(element => {
     //   if (hexBuffer.includes(element.name)) {
@@ -570,9 +598,9 @@ class Visualization {
 
   isHoveringAreaBuffer(buffer) {
     let subBuffer = [];
-    let viewPortWidth = width; 
-    let viewPortHeight = height; 
-    let session = renderer.xr.getSession(); 
+    let viewPortWidth = width;
+    let viewPortHeight = height;
+    let session = renderer.xr.getSession();
     if (session && renderer.xr.isPresenting) {
       session.requestAnimationFrame(() => {
         // Access the baseLayer of the render
@@ -582,16 +610,16 @@ class Visualization {
           const views = session.renderState.layers[0].views;
           views.forEach((view, index) => {
             const viewport = baseLayer.getViewport(view);
-            console.log("Viewport", index,": width = ",viewport.width, "height =",viewport.height);
-            viewPortWidth = viewport.width; 
-            viewPortHeight = viewport.height; 
+            console.log("Viewport", index, ": width = ", viewport.width, "height =", viewport.height);
+            viewPortWidth = viewport.width;
+            viewPortHeight = viewport.height;
           });
         }
       });
-      subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, 1000, 0); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
+      subBuffer = this.findAreaFromArray(buffer, viewPortWidth, viewPortHeight, params.areaPickSize, 1000, 860); // quest 3 res: 1680x1760 // 1000 works well for width, ~860 for height!! 
     } else {
       console.log('WebXR session is not started or available.');
-      subBuffer = this.findAreaFromArray(buffer, params.areaPickSize, width / 2, height / 2); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
+      subBuffer = this.findAreaFromArray(buffer, width, height, params.areaPickSize, width / 2, height / 2); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
     }
     return subBuffer;
   }
@@ -696,18 +724,18 @@ class Visualization {
   }
 
 
-  findAreaFromArray(array, squareSize, xCor, yCor) {
-    yCor = Math.abs(yCor - height); // reversing the Y-coordinate
+  findAreaFromArray(array, arrayWidth, ArrayHeight, squareSize, xCor, yCor) {
+    // yCor = Math.abs(yCor - height); // reversing the Y-coordinate
     let row = 0;
     let column = 0;
     let startRow = Math.ceil(yCor - squareSize / 2);
     startRow = startRow < 0 ? 0 : startRow;
     let endRow = Math.floor(yCor + squareSize / 2);
-    endRow = endRow > height ? height : endRow;
+    endRow = endRow > ArrayHeight ? ArrayHeight : endRow;
     let startCol = Math.ceil(xCor - squareSize / 2);
     startCol = startCol < 0 ? 0 : startCol;
     let endCol = Math.floor(xCor + squareSize / 2);
-    endCol = endCol > width ? width : endCol;
+    endCol = endCol > arrayWidth ? arrayWidth : endCol;
     let subArray = []
 
     for (let index = 0; index < array.length; index++) {
@@ -715,7 +743,7 @@ class Visualization {
         subArray.push(array[index]);
       }
       column++;
-      if (column >= width) {
+      if (column >= arrayWidth) {
         column = 0;
         row++;
       }

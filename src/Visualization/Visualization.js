@@ -103,7 +103,7 @@ const params = {
   x: 0,
   y: 0,
   z: 0,
-  areaPickSize: 301, //should be an odd number!!
+  areaPickSize: 501, //should be an odd number!!
   Start: function () { },
   Stop: function () { },
   Show_Results: function () { },
@@ -250,13 +250,13 @@ class Visualization {
       } else { color = colorScale[3] }
 
       // Map the data to a specific plot area 
-      let xVal = this.map_range(element.sepalLength, xAttrMin, xAttrMax, -25, 25);
-      let yVal = this.map_range(element.sepalWidth, yAttrMin, yAttrMax, -25, 25);
-      let zVal = this.map_range(element.petalWidth, zAttrMin, zAttrMax, -25, 25);
+      let xVal = this.map_range(element.sepalLength, xAttrMin, xAttrMax, 1, 5);
+      let yVal = this.map_range(element.sepalWidth, yAttrMin, yAttrMax, -1, 2);
+      let zVal = this.map_range(element.petalWidth, zAttrMin, zAttrMax, 1, 5);
 
       // TODO: Nice way to bind data-dimensions to scene dimensions (X,Y,Z), and to mark-attributes (size, height/width/thickness, colour, orientation) depending on the type of mark. 
       // TODO: Normalise input data to a desired, configurable size of the visualization. 
-      this.createSphere(index + 1, color, new THREE.Vector3(xVal, yVal, zVal), 0.5);
+      this.createSphere(index + 1, color, new THREE.Vector3(xVal, yVal, zVal), 0.05);
 
     } // for
 
@@ -561,6 +561,7 @@ class Visualization {
         // Access the baseLayer of the render
         const baseLayer = session.renderState.baseLayer;
         // Log each view (eye)'s viewport size
+        while(!baseLayer.getViewport) {}; // Wait until the viewport exists
         if (baseLayer.getViewport) { // if viewport exists
           const views = session.renderState.layers[0].views;
           views.forEach((view, index) => {
@@ -606,6 +607,7 @@ class Visualization {
         // Access the baseLayer of the render
         const baseLayer = session.renderState.baseLayer;
         // Log each view (eye)'s viewport size
+        while(!baseLayer.getViewport) {}; // Wait until the viewport exists
         if (baseLayer.getViewport) { // if viewport exists
           const views = session.renderState.layers[0].views;
           views.forEach((view, index) => {
@@ -616,7 +618,7 @@ class Visualization {
           });
         }
       });
-      subBuffer = this.findAreaFromArray(buffer, viewPortWidth, viewPortHeight, params.areaPickSize, 1000, 860); // quest 3 res: 1680x1760 // 1000 works well for width, ~860 for height!! 
+      subBuffer = this.findAreaFromArray(buffer, width, height, params.areaPickSize, 1000, 1000); // quest 3 res: 1680x1760 // 1000 works well for width, ~860 for height!! 
     } else {
       console.log('WebXR session is not started or available.');
       subBuffer = this.findAreaFromArray(buffer, width, height, params.areaPickSize, width / 2, height / 2); // mousePick.x, mousePick.y); quest 3 res: 1680x1760 // 1000 works well for width!! 
@@ -728,13 +730,13 @@ class Visualization {
     // yCor = Math.abs(yCor - height); // reversing the Y-coordinate
     let row = 0;
     let column = 0;
-    let startRow = Math.ceil(yCor - squareSize / 2);
+    let startRow = Math.ceil((yCor) - squareSize / 2);
     startRow = startRow < 0 ? 0 : startRow;
-    let endRow = Math.floor(yCor + squareSize / 2);
+    let endRow = Math.floor((yCor) + squareSize / 2);
     endRow = endRow > ArrayHeight ? ArrayHeight : endRow;
-    let startCol = Math.ceil(xCor - squareSize / 2);
+    let startCol = Math.ceil((xCor) - squareSize / 2);
     startCol = startCol < 0 ? 0 : startCol;
-    let endCol = Math.floor(xCor + squareSize / 2);
+    let endCol = Math.floor((xCor) + squareSize / 2);
     endCol = endCol > arrayWidth ? arrayWidth : endCol;
     let subArray = []
 

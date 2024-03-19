@@ -103,7 +103,7 @@ const params = {
   x: 0,
   y: 0,
   z: 0,
-  areaPickSize: 401, //should be an odd number!!
+  areaPickSize: 361, //should be an odd number!!
   Start: function () { },
   Stop: function () { },
   Show_Results: function () { },
@@ -553,26 +553,29 @@ class Visualization {
    */
   checkForOcclusion() {
     var hexBuffer;
-    let viewPortWidth = width;
-    let viewPortHeight = height;
+    var viewPortWidth = 2100; 
+    var viewPortHeight = 1800;
     let session = renderer.xr.getSession();
     if (session && renderer.xr.isPresenting) {
-      session.requestAnimationFrame(() => {
-        // Access the baseLayer of the render
-        const baseLayer = session.renderState.baseLayer;
-        // Log each view (eye)'s viewport size
-        // while (!baseLayer.getViewport) { }; // Wait until the viewport exists
-        if (baseLayer.getViewport) { // if viewport exists
-          const views = session.renderState.layers[0].views[0];
-          // views.forEach((view, index) => {
-            const viewport = baseLayer.getViewport(views);
-            console.log("Viewport", index, ": width = ", viewport.width, "height =", viewport.height);
-            viewPortWidth = viewport.width;
-            viewPortHeight = viewport.height;
-            pickingTextureOcclusion = new THREE.WebGLRenderTarget(viewPortWidth, viewPortHeight);
-          // });
-        }
-      });
+      // if (session.renderState.baseLayer.framebufferWidth) { viewPortWidth = session.renderState.baseLayer.framebufferWidth; }
+      // if (session.renderState.baseLayer.framebufferHeight) { viewPortHeight = session.renderState.baseLayer.framebufferHeight; }
+            // session.requestAnimationFrame(() => {
+            //   // Access the baseLayer of the render
+            //   const baseLayer = session.renderState.baseLayer;
+            //   // Log each view (eye)'s viewport size
+            //   // while (!baseLayer.getViewport) { }; // Wait until the viewport exists
+            //   if (baseLayer.getViewport) { // if viewport exists
+            //     const views = session.renderState.layers[0].views[0];
+            //     // views.forEach((view, index) => {
+            //       const viewport = baseLayer.getViewport(views);
+            //       console.log("Viewport", index, ": width = ", viewport.width, "height =", viewport.height);
+            //       viewPortWidth = viewport.width;
+            //       viewPortHeight = viewport.height;
+            //       pickingTextureOcclusion = new THREE.WebGLRenderTarget(viewPortWidth, viewPortHeight);
+            //     // });
+            //   }
+            // });
+      pickingTextureOcclusion = new THREE.WebGLRenderTarget(viewPortWidth, viewPortHeight);
       renderer.setRenderTarget(pickingTextureOcclusion);
       renderer.render(pickingScene, camera);
       var pixelBuffer = new Uint8Array(viewPortWidth * viewPortHeight * 4);
@@ -599,27 +602,30 @@ class Visualization {
 
   isHoveringAreaBuffer(buffer) {
     let subBuffer;
-    let viewPortWidth = width;
-    let viewPortHeight = height;
+    var viewPortWidth = 2100; 
+    var viewPortHeight = 1800;
     let session = renderer.xr.getSession();
     if (session && renderer.xr.isPresenting) {
-      session.requestAnimationFrame(() => {
-        // Access the baseLayer of the render
-        const baseLayer = session.renderState.baseLayer;
-        // Log each view (eye)'s viewport size
-        // while(!baseLayer.getViewport) {}; // Wait until the viewport exists
-        if (baseLayer.getViewport) { // if viewport exists
-          const views = session.renderState.layers[0].views[0];
-          // views.forEach((view, index) => {
-          const viewport = baseLayer.getViewport(views);
-          console.log("Viewport", index, ": width = ", viewport.width, "height =", viewport.height);
-          viewPortWidth = viewport.width;
-          viewPortHeight = viewport.height;
-          // });
-        }
+      // viewPortWidth = session.renderState.baseLayer.framebufferWidth;
+      // viewPortHeight = session.renderState.baseLayer.framebufferHeight;
+      // session.requestAnimationFrame(() => {
+      //   // Access the baseLayer of the render
+      //   const baseLayer = session.renderState.baseLayer;
+      //   // Log each view (eye)'s viewport size
+      //   while(baseLayer.getViewport == undefined) {}; // Wait until the viewport exists
+      //   if (baseLayer.getViewport) { // if viewport exists
+      //     const views = session.renderState.layers[0].views;
+      //     views.forEach((view, index) => {
+      //     const viewport = baseLayer.getViewport(views);
+      //     console.log("Viewport", index, ": width = ", viewport.width, "height =", viewport.height);
+      //     viewPortWidth = viewport.width;
+      //     viewPortHeight = viewport.height;
+      //     });
+      //     subBuffer = this.findAreaFromArray(buffer, viewPortWidth, viewPortHeight, params.areaPickSize, viewPortWidth / 1.35, 0); // quest 3 res: 1680x1760 // 1000 works well for width, ~860 for height!! 
+      //   }
 
-      });
-      subBuffer = this.findAreaFromArray(buffer, viewPortWidth, viewPortHeight, params.areaPickSize, viewPortWidth / 1.35, 0); // quest 3 res: 1680x1760 // 1000 works well for width, ~860 for height!! 
+      // });
+      subBuffer = this.findAreaFromArray(buffer, viewPortWidth, viewPortHeight, params.areaPickSize, viewPortWidth / 2, viewPortHeight / 2); // quest 3 res: 1680x1760 // 1000 works well for width, ~860 for height!! 
       return subBuffer;
     } else {
       console.log('WebXR session is not started or available.');
@@ -730,12 +736,12 @@ class Visualization {
 
   findAreaFromArray(array, arrayWidth, arrayHeight, squareSize, xCor, yCor) {
     yCor = Math.abs(yCor - (arrayHeight)); // reversing the Y-coordinate
-    if (arrayWidth * arrayHeight != array.length) {
-      alert("Something's up!");
-    }
+    // if (arrayWidth * arrayHeight != array.length) {
+    //   alert("Something's up!");
+    // }
 
-    if (yCor < 0) yCor = 0; 
-    if (xCor < 0) xCor = 0; 
+    if (yCor < 0) yCor = 0;
+    if (xCor < 0) xCor = 0;
     let row = 0;
     let column = 0;
     let startRow = Math.ceil((yCor) - squareSize / 2);
@@ -753,7 +759,7 @@ class Visualization {
         subArray.push(array[index]);
       }
       column++;
-      if (column > arrayWidth-1) {
+      if (column > arrayWidth - 1) {
         column = 0;
         row++;
       }

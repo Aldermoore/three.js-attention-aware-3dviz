@@ -104,14 +104,19 @@ const params = {
   y: 0,
   z: 0,
   areaPickSize: 361, //should be an odd number!!
-  Start: function () { },
-  Stop: function () { },
-  Show_Results: function () { },
-  Reset: function () { },
-  LiveUpdate: true,
+  Start: function () { viz.startExperiment() },
+  Stop: function () { viz.stopExperiment() },
+  Show_Results: function () { viz.showExperimentResults() },
+  Reset: function () { viz.resetExperimentData() },
+  LiveUpdate: false,
   AllowDeemphasis: true,
   AllowEmphasis: true,
-  resetColors: function () { }
+  resetColors: function () { viz.resetColorsOnAllPoints() },
+  deemphasizeThreshold: 90,
+  emphasizeThreshold: 5,
+  attentionIntervalMS: 100,
+  recolorIntervalMS: 100,
+  decayRate: 1000
 };
 
 var viz;
@@ -261,25 +266,28 @@ class Visualization {
     } // for
 
 
-    // visibleObjectsDiv = new HTMLMesh( hovermessage.dom );
-    // visibleObjectsDiv.height = 100;
-    // visibleObjectsDiv.width = 100; 
-    // visibleObjectsDiv.position.x = 0.75;
-    // visibleObjectsDiv.position.y = 0;
-    // visibleObjectsDiv.position.z = 0.5;
-    // visibleObjectsDiv.rotation.y = Math.PI / 2;
-    // // mesh.scale.setScalar( 2 );
-    // group.add( visibleObjectsDiv ); 
+    const textureLoader = new THREE.TextureLoader();
+    const decalDiffuse = textureLoader.load('earth-day.jpg');
 
+
+    // let geometry = new THREE.SphereGeometry(1);
+    // let material = new THREE.MeshPhongMaterial({ color: '#ffffff', vertexColors: false, transparent: true, opacity: 0.9, alphaHash: false });
+    // let sphere = new THREE.Mesh(geometry, material);
+    // sphere.position.set(2.5, 0, 2.5);
+    // scene.add(sphere); 
+    // material = new THREE.MeshPhongMaterial({ color: 'white', flatShading: false, vertexColors: false});
+    // let pickingSphere = new THREE.Mesh(geometry, material);
+    // pickingSphere.position.set(2.5, 0, 2.5);
+    // pickingScene.add(pickingSphere);
   }
 
-  makeGUI() {
+  makeGUI(visualization) {
     gui = new GUI();
-    const folder = gui.addFolder('Dataset properties');
-    folder.add(params, 'x');
-    folder.add(params, 'y');
-    folder.add(params, 'z');
-    folder.close();
+    const dataSet = gui.addFolder('Dataset properties');
+    dataSet.add(params, 'x');
+    dataSet.add(params, 'y');
+    dataSet.add(params, 'z');
+    dataSet.close();
     const areaPick = gui.add(params, 'areaPickSize', 11, 501, 10);
     areaPick.name("Size of gaze area (px Ø)")
     areaPick.onFinishChange(function (v) {
@@ -289,57 +297,68 @@ class Visualization {
     });
 
     const expSettings = gui.addFolder('Experiment Settings');
-    expSettings.add(params, 'Start').name("Start data collection").onChange(viz.startExperiment());
-    expSettings.add(params, 'Stop').name("Stop data collection").onChange(this.stopExperiment());
-    expSettings.add(params, 'Show_Results').name("Show cumulative attention").onChange(this.showExperimentResults());
-    expSettings.add(params, 'Reset').name("Reset/discard collected data").onChange(this.resetExperimentData());
+    expSettings.add(params, 'Start').name("Start data collection");
+    expSettings.add(params, 'Stop').name("Stop data collection");
+    expSettings.add(params, 'Show_Results').name("Show cumulative attention");
+    expSettings.add(params, 'Reset').name("Reset/discard collected data");
     expSettings.add(params, "LiveUpdate").name("Show realtime cumulative attention").onFinishChange(value => {
       this.toggleLiveUpdate(value);
     });
     expSettings.add(params, "AllowDeemphasis").name("Allow deemphasis of points").onChange(value => {
-      this.toggleDeemphasis(value);
+      visualization.toggleDeemphasis(value);
     });
     expSettings.add(params, "AllowEmphasis").name("Allow emphasis of points").onChange(value => {
-      this.toggleEmphasis(value);
+      visualization.toggleEmphasis(value);
     });
-    expSettings.add(params, 'resetColors').name("Reset colours of the visualization").onChange(this.resetColorsOnAllPoints());
+    expSettings.add(params, 'resetColors').name("Reset colours of the visualization");
+
+
+
+    const attentionSettings = gui.addFolder('Attention Model Settings');
+    attentionSettings.add(params, 'deemphasizeThreshold', 60, 100, 5).name("Deemphasis threshold"); 
+    attentionSettings.add(params, 'emphasizeThreshold', 0, 40, 5).name("Emphasis threshold"); 
+    attentionSettings.add(params, 'attentionIntervalMS', 10, 1000, 100).name("Attention update (MS)"); 
+    attentionSettings.add(params, 'recolorIntervalMS', 10, 1000, 100).name("Recolouring update (MS)"); 
+    attentionSettings.add(params, 'decayRate', 100, 5000, 500).name("Attention decay (MS)"); 
+
+    attentionSettings.close(); 
 
     gui.open();
-    gui.domElement.style.visibility = 'hidden';
+    gui.domElement.style.visibility = 'visible';
 
-    group = new InteractiveGroup(renderer, camera);
-    scene.add(group);
+    // group = new InteractiveGroup(renderer, camera);
+    // // scene.add(group);
 
-    const mesh = new HTMLMesh(gui.domElement);
-    mesh.position.x = -0.75;
-    mesh.position.y = 0;
-    mesh.position.z = -0.5;
-    mesh.rotation.y = Math.PI / 4;
-    // mesh.scale.setScalar( 2 );
-    group.add(mesh);
+    // const mesh = new HTMLMesh(gui.domElement);
+    // mesh.position.x = -0.75;
+    // mesh.position.y = 0;
+    // mesh.position.z = -0.5;
+    // mesh.rotation.y = Math.PI / 4;
+    // // mesh.scale.setScalar( 2 );
+    // group.add(mesh);
 
     stats = new Stats();
     vizContainer.appendChild(stats.dom);
     stats.dom.style.width = '80px';
     stats.dom.style.height = '48px';
 
-    const statsMesh = new HTMLMesh(stats.dom);
-    statsMesh.position.x = - 0.75;
-    statsMesh.position.y = 0.5;
-    statsMesh.position.z = - 0.6;
-    statsMesh.rotation.y = Math.PI / 4;
-    // statsMesh.scale.setScalar( 2.5 );
-    group.add(statsMesh);
+    // const statsMesh = new HTMLMesh(stats.dom);
+    // statsMesh.position.x = - 0.75;
+    // statsMesh.position.y = 0.5;
+    // statsMesh.position.z = - 0.6;
+    // statsMesh.rotation.y = Math.PI / 4;
+    // // statsMesh.scale.setScalar( 2.5 );
+    // group.add(statsMesh);
   }
 
 
   start() {
-    this.makeGUI();
     this.init();
+    this.makeGUI(viz);
     this.render();
     this.animate();
-    this.toggleLiveUpdate();
-    this.startExperiment();
+    //this.toggleLiveUpdate();
+    // this.startExperiment();
   }
 
 
@@ -352,6 +371,7 @@ class Visualization {
     // draw a single frame
     // renderer.setViewport(0, 0, renderer.domElement?.offsetWidth, renderer.domElement?.offsetHeight);
     renderer.render(scene, camera);
+    stats.update();
     // renderer.autoClear = false;
     // // viewHelper.render(renderer);
     // renderer.autoClear = true;
@@ -553,28 +573,28 @@ class Visualization {
    */
   checkForOcclusion() {
     var hexBuffer;
-    var viewPortWidth = 2100; 
+    var viewPortWidth = 2100;
     var viewPortHeight = 1800;
     let session = renderer.xr.getSession();
     if (session && renderer.xr.isPresenting) {
       // if (session.renderState.baseLayer.framebufferWidth) { viewPortWidth = session.renderState.baseLayer.framebufferWidth; }
       // if (session.renderState.baseLayer.framebufferHeight) { viewPortHeight = session.renderState.baseLayer.framebufferHeight; }
-            // session.requestAnimationFrame(() => {
-            //   // Access the baseLayer of the render
-            //   const baseLayer = session.renderState.baseLayer;
-            //   // Log each view (eye)'s viewport size
-            //   // while (!baseLayer.getViewport) { }; // Wait until the viewport exists
-            //   if (baseLayer.getViewport) { // if viewport exists
-            //     const views = session.renderState.layers[0].views[0];
-            //     // views.forEach((view, index) => {
-            //       const viewport = baseLayer.getViewport(views);
-            //       console.log("Viewport", index, ": width = ", viewport.width, "height =", viewport.height);
-            //       viewPortWidth = viewport.width;
-            //       viewPortHeight = viewport.height;
-            //       pickingTextureOcclusion = new THREE.WebGLRenderTarget(viewPortWidth, viewPortHeight);
-            //     // });
-            //   }
-            // });
+      // session.requestAnimationFrame(() => {
+      //   // Access the baseLayer of the render
+      //   const baseLayer = session.renderState.baseLayer;
+      //   // Log each view (eye)'s viewport size
+      //   // while (!baseLayer.getViewport) { }; // Wait until the viewport exists
+      //   if (baseLayer.getViewport) { // if viewport exists
+      //     const views = session.renderState.layers[0].views[0];
+      //     // views.forEach((view, index) => {
+      //       const viewport = baseLayer.getViewport(views);
+      //       console.log("Viewport", index, ": width = ", viewport.width, "height =", viewport.height);
+      //       viewPortWidth = viewport.width;
+      //       viewPortHeight = viewport.height;
+      //       pickingTextureOcclusion = new THREE.WebGLRenderTarget(viewPortWidth, viewPortHeight);
+      //     // });
+      //   }
+      // });
       pickingTextureOcclusion = new THREE.WebGLRenderTarget(viewPortWidth, viewPortHeight);
       renderer.setRenderTarget(pickingTextureOcclusion);
       renderer.render(pickingScene, camera);
@@ -602,7 +622,7 @@ class Visualization {
 
   isHoveringAreaBuffer(buffer) {
     let subBuffer;
-    var viewPortWidth = 2100; 
+    var viewPortWidth = 2100;
     var viewPortHeight = 1800;
     let session = renderer.xr.getSession();
     if (session && renderer.xr.isPresenting) {
@@ -1153,10 +1173,10 @@ class Visualization {
       let circleBuffer = this.circleFromSquareBuffer(subBuffer);
       this.addAttentionToFaces(circleBuffer);
       this.increaseAttentionToPoint(circleBuffer);
-    }, attentionIntervalMS);
+    }, params.attentionIntervalMS);
     decayID = setInterval(() => {
       this.decayTempAttention();
-    }, decayRate);
+    }, params.decayRate);
   }
 
 
@@ -1214,7 +1234,7 @@ class Visualization {
             this.recolorVerticesOnPoint(element);
           }
         });
-      }, recolorIntervalMS);
+      }, params.recolorIntervalMS);
     }
   }
 

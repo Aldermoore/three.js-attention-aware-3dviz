@@ -17,6 +17,8 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
 // WebXR stuff
 import { ARButton } from 'three/addons/webxr/ARButton.js';
+import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+
 import { HTMLMesh } from 'three/addons/interactive/HTMLMesh.js';
 import { InteractiveGroup } from 'three/addons/interactive/InteractiveGroup.js';
 
@@ -87,7 +89,9 @@ var liveUpdate = false;
 // WebXR stuff 
 let controller;
 let gui;
-let group;
+let controller1, controller2;
+let controllerGrip1, controllerGrip2;
+let previewing = false;
 
 
 // These are for showing that it works and should be removed as some point. 
@@ -109,8 +113,8 @@ const params = {
   Show_Results: function () { viz.showExperimentResults() },
   Reset: function () { viz.resetExperimentData() },
   LiveUpdate: false,
-  AllowDeemphasis: true,
-  AllowEmphasis: true,
+  allowDeemphasis: true,
+  allowEmphasis: true,
   resetColors: function () { viz.resetColorsOnAllPoints() },
   deemphasizeThreshold: 90,
   emphasizeThreshold: 5,
@@ -279,7 +283,123 @@ class Visualization {
     // let pickingSphere = new THREE.Mesh(geometry, material);
     // pickingSphere.position.set(2.5, 0, 2.5);
     // pickingScene.add(pickingSphere);
+
+
+    controller1 = renderer.xr.getController(0);
+    controller1.addEventListener('selectstart', this.onSelectStart);
+    controller1.addEventListener('selectend', this.onSelectEnd);
+    controller1.addEventListener('connected', function (event) {
+
+      this.add(this.buildController(event.data));
+
+    });
+    controller1.addEventListener('disconnected', function () {
+
+      this.remove(this.children[0]);
+
+    });
+    scene.add(controller1);
+
+    controller2 = renderer.xr.getController(1);
+    controller2.addEventListener('selectstart', this.onSelectStart);
+    controller2.addEventListener('selectend', this.onSelectEnd);
+    controller2.addEventListener('connected', function (event) {
+
+      this.add(this.buildController(event.data));
+
+    });
+    controller2.addEventListener('disconnected', function () {
+
+      this.remove(this.children[0]);
+
+    });
+    scene.add(controller2);
+
+    // The XRControllerModelFactory will automatically fetch controller models
+    // that match what the user is holding as closely as possible. The models
+    // should be attached to the object returned from getControllerGrip in
+    // order to match the orientation of the held device.
+
+    const controllerModelFactory = new XRControllerModelFactory();
+
+    controllerGrip1 = renderer.xr.getControllerGrip(0);
+    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+    scene.add(controllerGrip1);
+
+    controllerGrip2 = renderer.xr.getControllerGrip(1);
+    controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+    scene.add(controllerGrip2);
   }
+
+
+
+
+  buildController(data) {
+
+    let geometry, material;
+
+    switch (data.targetRayMode) {
+
+      case 'tracked-pointer':
+
+        geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, - 1], 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute([0.5, 0.5, 0.5, 0, 0, 0], 3));
+
+        material = new THREE.LineBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending });
+
+        return new THREE.Line(geometry, material);
+
+      case 'gaze':
+
+        geometry = new THREE.RingGeometry(0.02, 0.04, 32).translate(0, 0, - 1);
+        material = new THREE.MeshBasicMaterial({ opacity: 0.5, transparent: true });
+        return new THREE.Mesh(geometry, material);
+
+    }
+
+  }
+
+
+  handleLivePreview(controller) {
+
+    if (controller.userData.isSelecting) {
+      dataPoints.children.forEach(element => {
+        this.recolorVerticesOnPoint(element);
+      });
+    }
+
+  }
+
+
+
+  handleShowExtremes(controller) {
+
+
+
+    if (controller.userData.isSelecting) {
+      
+      this.emphasiseLeastSeenObjects(10);
+      this.deemphasiseMostSeenObjects(10);
+    }
+
+  }
+
+
+
+  onSelectStart() {
+
+    this.userData.isSelecting = true;
+
+  }
+
+  onSelectEnd() {
+
+    this.userData.isSelecting = false;
+
+  }
+
+
 
   makeGUI(visualization) {
     gui = new GUI();
@@ -304,10 +424,10 @@ class Visualization {
     expSettings.add(params, "LiveUpdate").name("Show realtime cumulative attention").onFinishChange(value => {
       this.toggleLiveUpdate(value);
     });
-    expSettings.add(params, "AllowDeemphasis").name("Allow deemphasis of points").onChange(value => {
+    expSettings.add(params, "allowDeemphasis").name("Allow deemphasis of points").onChange(value => {
       visualization.toggleDeemphasis(value);
     });
-    expSettings.add(params, "AllowEmphasis").name("Allow emphasis of points").onChange(value => {
+    expSettings.add(params, "allowEmphasis").name("Allow emphasis of points").onChange(value => {
       visualization.toggleEmphasis(value);
     });
     expSettings.add(params, 'resetColors').name("Reset colours of the visualization");
@@ -315,13 +435,13 @@ class Visualization {
 
 
     const attentionSettings = gui.addFolder('Attention Model Settings');
-    attentionSettings.add(params, 'deemphasizeThreshold', 60, 100, 5).name("Deemphasis threshold"); 
-    attentionSettings.add(params, 'emphasizeThreshold', 0, 40, 5).name("Emphasis threshold"); 
-    attentionSettings.add(params, 'attentionIntervalMS', 10, 1000, 100).name("Attention update (MS)"); 
-    attentionSettings.add(params, 'recolorIntervalMS', 10, 1000, 100).name("Recolouring update (MS)"); 
-    attentionSettings.add(params, 'decayRate', 100, 5000, 500).name("Attention decay (MS)"); 
+    attentionSettings.add(params, 'deemphasizeThreshold', 60, 100, 5).name("Deemphasis threshold");
+    attentionSettings.add(params, 'emphasizeThreshold', 0, 40, 5).name("Emphasis threshold");
+    attentionSettings.add(params, 'attentionIntervalMS', 10, 1000, 100).name("Attention update (MS)");
+    attentionSettings.add(params, 'recolorIntervalMS', 10, 1000, 100).name("Recolouring update (MS)");
+    attentionSettings.add(params, 'decayRate', 100, 5000, 500).name("Attention decay (MS)");
 
-    attentionSettings.close(); 
+    attentionSettings.close();
 
     gui.open();
     gui.domElement.style.visibility = 'visible';
@@ -370,6 +490,10 @@ class Visualization {
   render() {
     // draw a single frame
     // renderer.setViewport(0, 0, renderer.domElement?.offsetWidth, renderer.domElement?.offsetHeight);
+
+    this.handleLivePreview(controller2); // controller2 (right hand) does not seem to work...
+    this.handleShowExtremes(controller1);
+
     renderer.render(scene, camera);
     stats.update();
     // renderer.autoClear = false;
@@ -393,12 +517,12 @@ class Visualization {
         // console.log(tempObjectAttentionStore);
         for (const element of dataPoints.children) {
 
-          if (params.AllowDeemphasis && tempObjectAttentionStore[element.name] > deemphasizeThreshold) { // check if point needs to be deemphasised
+          if (params.allowDeemphasis && tempObjectAttentionStore[element.name] > deemphasizeThreshold) { // check if point needs to be deemphasised
             triggeredStore[element.name] = true;
             // deemphasizing 
             element.material.color.lerp(new THREE.Color("#555555"), 0.05);
 
-          } else if (params.AllowEmphasis && tempObjectAttentionStore[element.name] < emphasizeThreshold) { // check if point needs to be emphasised 
+          } else if (params.allowEmphasis && tempObjectAttentionStore[element.name] < emphasizeThreshold) { // check if point needs to be emphasised 
 
             triggeredStore[element.name] = true;
             // emphasize
@@ -1027,6 +1151,50 @@ class Visualization {
     }
     console.log(objectAttentionStore);
   }
+
+
+
+  emphasiseLeastSeenObjects(numberOfObjects) {
+    let attentionStore = objectAttentionStore;
+      attentionStore.sort();
+      let objectsToBeEmphasised = attentionStore.slice(numberOfObjects - 1);
+
+      dataPoints.children.forEach(element => {
+        if (objectsToBeEmphasised.includes(element.name)) {
+          this.applyVertexColors(element.geometry, new THREE.Color('orange'));
+        }
+
+      });
+
+    // let attentionStore = objectAttentionStore;
+    // attentionStore.sort();
+    // let objectsToBeEmphasised = attentionStore.slice(numberOfObjects - 1);
+    // dataPoints.children.array.forEach(element => {
+    //   for (let index = 0; index < objectsToBeEmphasised.length; index++) {
+    //     if (element.name === objectsToBeEmphasised[index]) {
+    //       // object must be recolored
+    //       this.applyVertexColors(element.geometry, new THREE.Color('orange'));
+    //     }
+
+    //   }
+    // });
+  }
+
+
+
+  deemphasiseMostSeenObjects(numberOfObjects) {
+    let attentionStore = objectAttentionStore;
+    attentionStore.sort(); 
+    attentionStore.reverse();
+    let objectsToBeDeemphasised = attentionStore.slice(numberOfObjects - 1);
+    dataPoints.children.forEach(element => {
+      if (objectsToBeDeemphasised.includes(element.name)) {
+        element.material.color = new THREE.Color("#555555");
+      }
+
+    });
+  }
+
 
 
   findUnderAttendedObjects() {

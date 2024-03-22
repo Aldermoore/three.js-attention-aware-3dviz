@@ -8,28 +8,23 @@ import { createRenderer } from './systems/renderer.js';
 import { Resizer } from './systems/Resizer.js';
 import { Loop } from './systems/Loop.js';
 import { createControls } from './systems/controls.js'
-import iris from './data/iris.json' assert {type: 'json'}; //Our data
-import elevation from './data/mt_bruno_elevation.json' assert {type: 'json'}; //Our data
+
+// Datasets
+import iris from './data/iris.json' assert {type: 'json'};
+import elevation from './data/mt_bruno_elevation.json' assert {type: 'json'};
+import cars from './data/cars.json' assert {type: 'json'};
+
 // import { ViewHelper } from './components/viewHelper.js';
+
 // THREEjs libraries 
 import TWEEN from '@tweenjs/tween.js'
 
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
+
 // WebXR stuff
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
-
-import { HTMLMesh } from 'three/addons/interactive/HTMLMesh.js';
-import { InteractiveGroup } from 'three/addons/interactive/InteractiveGroup.js';
-
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 
 let vizContainer;
@@ -263,23 +258,157 @@ class Visualization {
 
 
 
-    if (params.data === 'Scatterplot') {
-      // Initialising the scatterplot
-      this.createScatterplotVisualization();
-    } else if (params.data === 'Terrainmap') {
-      // Initialising the terrainmap
-      this.createTerrainMapVisualization(); 
-    } else if (params.data === 'Barchart') {
-      // Initialising the barchart
-      // TODO: Implement a 3d barchart
+    let models = [70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82];
+    let cylinders = [3, 4, 5, 6, 8];
+
+    // for (let i = 0; i < cars.length; i++) {
+    //   let origin = cars[i].Model;
+
+    //   if (!models.includes(origin)) {
+    //     console.log("pushing value to array");
+    //     models.push(origin);
+    //   }
+    // }
+
+    // let dataColumns = [];
+
+    let finalData = new Array(models.length);
+    for (let i = 0; i < finalData.length; i++) {
+      finalData[i] = new Array(cylinders.length);
+      finalData[i].fill(0);
+
     }
+    console.log(finalData);
+
+    for (let i = 0; i < cars.length; i++) {
+      let model, cylinder = 0;
+      let car = cars[i];
+      for (let j = 0; j < finalData.length; j++) {
+        if (car.Model == models[j]) {
+          model = j;
+        }
+      }
+      for (let k = 0; k < cylinders.length; k++) {
+        if (car.Cylinders == cylinders[k]) {
+          cylinder = k;
+        }
+      }
+      console.log(model, cylinder);
+      finalData[model][cylinder] += 1;
+    }
+
+    console.log("here's the final data:", finalData);
+
+
+    let id = 1;
+    for (let row = 0; row < finalData.length; row++) {
+      for (let col = 0; col < finalData[0].length; col++) {
+        let height = finalData[row][col];
+        console.log(height);
+        height = this.map_range(height, 0, 28, 0, 1.5)
+        let heightSegments = height * 4;
+        if (height === 0) {
+          height = 0.1;
+          heightSegments = 1;
+        }
+        let markColor = new THREE.Color("silver");
+        let position = new THREE.Vector3(row, 0, col)
+        let geometry = new THREE.BoxGeometry(0.5, height, 0.5, 2, heightSegments, 2);
+        let material = new THREE.MeshPhongMaterial({ color: markColor, wireframe: false, flatShading: false, userData: { oldColor: markColor }, vertexColors: true });
+        material.userData.originalColor = markColor;
+
+
+        let box = new THREE.Mesh(geometry, material);
+
+
+        facesAttentionStore[id] = new Array(geometry.attributes.position.count * 2); // TODO: find the optimal size for this array! 
+        facesAttentionStore[id].fill(0);
+        objectAttentionStore[id] = 0;
+        tempObjectAttentionStore[id] = 50;
+
+
+        box.name = id;
+        id++;
+        box.position.set(position.x, height / 2, position.z);
+
+        let pickingBox = this.createBoxBuffer(geometry, box);
+        let pickingMesh = new THREE.Mesh(pickingBox, pickingMaterial);
+        pickingMesh.name = id;
+
+        box.geometry = box.geometry.toNonIndexed();
+        this.applyVertexColors(box.geometry, new THREE.Color(markColor)); // markColor
+
+        dataPoints.add(box);
+        pickingPoints.add(pickingMesh);
+      }
+
+    }
+
+
+    // let j, i = 0; 
+    // for (j = 0; j < models.length; j++) {
+    //   let arr = [];
+    //   for (i = 0; i < cars.length; i++) {
+    //     let element = cars[i];
+    //     if (element.Model === models[j]) {
+    //       arr.push(element);
+    //     }
+
+    //   }
+    //   dataColumns[j] = arr; 
+    // }
+
+    // console.log(dataColumns); // Array of arrays per model year 
+
+    // let m, n = 0; 
+    // for (m = 0; m < dataColumns.length; m++) {
+    //   const yearArray = dataColumns[m];
+    //   for (n = 0; n < yearArray.length; n++) {
+    //     console.log(yearArray[n]);
+    //     for (let i = 0; i < cylinders.length; i++) {
+
+    //     }
+    //     finalData[m]; 
+    //   }
+
+    // }
+
+
+
+    // if (params.data === 'Scatterplot') {
+    //   // Initialising the scatterplot
+    //   this.createScatterplotVisualization();
+    // } else if (params.data === 'Terrainmap') {
+    //   // Initialising the terrainmap
+    //   this.createTerrainMapVisualization(); 
+    // } else if (params.data === 'Barchart') {
+    //   // Initialising the barchart
+    //   // TODO: Implement a 3d barchart
+    // }
+  }
+
+  /**
+   * 
+   * @param {THREE.BoxGeometry} geometry The geometry who's attributes to copy
+   * @param {THREE.Mesh} mesh The mesh who's position and ID to copy
+   * @returns THREE.BoxGeometry constructed from the input geometry and mesh
+   */
+  createBoxBuffer(geometry, mesh) {
+    var buffer = new THREE.BoxGeometry(geometry.parameters.width, geometry.parameters.height, geometry.parameters.depth, geometry.parameters.widthSegments, geometry.parameters.heightSegments, geometry.parameters.depthSegments).toNonIndexed();; // SphereBufferGeometry
+    quaternion.setFromEuler(mesh.rotation);
+    matrix.compose(mesh.position, quaternion, mesh.scale);
+    buffer.applyMatrix4(matrix);
+    buffer.name = mesh.name;
+    this.applyUniqueVertexColors(buffer, buffer.name); // , color.setHex(mesh.name));
+
+    return buffer;
   }
 
 
   handleNewVisualization() {
     // remove old data from scene and picking scene
     dataPoints.children = [];
-    pickingPoints.children = [];  
+    pickingPoints.children = [];
 
     // Reconstruct the new visualisation
     if (params.data === 'Scatterplot') {
@@ -287,7 +416,7 @@ class Visualization {
       this.createScatterplotVisualization();
     } else if (params.data === 'Terrainmap') {
       // Initialising the terrainmap
-      this.createTerrainMapVisualization(); 
+      this.createTerrainMapVisualization();
     } else if (params.data === 'Barchart') {
       // Initialising the barchart
       // TODO: Implement a 3d barchart
@@ -656,14 +785,15 @@ class Visualization {
 
   /**
    * 
-   * @param {number} id ID of the mesh created
-   * @param {number} color Colour of the mesh created
-   * @param {THREE.Vector3} position Vector position of the mesh created
+   * @param {*} id 
+   * @param {*} markColor 
+   * @param {*} position 
+   * @param {*} size 
    */
   createTerrainMap(id, markColor, position, size) {
     let geometry = new THREE.PlaneGeometry(size, size, 24, 23);
     geometry.rotateX(-Math.PI * 0.5); // rotating the geometry to be vertical
-    let material = new THREE.MeshPhongMaterial({ color: color, side: THREE.DoubleSide, wireframe: false, flatShading: true, userData: { oldColor: markColor }, vertexColors: true });
+    let material = new THREE.MeshPhongMaterial({ color: markColor, side: THREE.DoubleSide, wireframe: false, flatShading: true, userData: { oldColor: markColor }, vertexColors: true });
 
     material.userData.originalColor = markColor;
     let plane = new THREE.Mesh(geometry, material);

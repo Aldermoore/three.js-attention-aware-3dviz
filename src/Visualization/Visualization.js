@@ -258,19 +258,46 @@ class Visualization {
 
 
 
+
+    if (params.data === 'Scatterplot') {
+      // Initialising the scatterplot
+      this.createScatterplotVisualization();
+    } else if (params.data === 'Terrainmap') {
+      // Initialising the terrainmap
+      this.createTerrainMapVisualization(); 
+    } else if (params.data === 'Barchart') {
+      // Initialising the barchart
+      this.createBarChartVisualization(); 
+    }
+  }
+
+
+
+  handleNewVisualization() {
+    // remove old data from scene and picking scene
+    dataPoints.children = [];
+    pickingPoints.children = [];
+
+    // Reconstruct the new visualisation
+    if (params.data === 'Scatterplot') {
+      // Initialising the scatterplot
+      this.createScatterplotVisualization();
+    } else if (params.data === 'Terrainmap') {
+      // Initialising the terrainmap
+      this.createTerrainMapVisualization();
+    } else if (params.data === 'Barchart') {
+      // Initialising the barchart
+      this.createBarChartVisualization(); 
+    }
+  }
+
+
+
+  createBarChartVisualization() {
+
     let models = [70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82];
     let cylinders = [3, 4, 5, 6, 8];
 
-    // for (let i = 0; i < cars.length; i++) {
-    //   let origin = cars[i].Model;
-
-    //   if (!models.includes(origin)) {
-    //     console.log("pushing value to array");
-    //     models.push(origin);
-    //   }
-    // }
-
-    // let dataColumns = [];
 
     let finalData = new Array(models.length);
     for (let i = 0; i < finalData.length; i++) {
@@ -304,13 +331,10 @@ class Visualization {
     for (let row = 0; row < finalData.length; row++) {
       for (let col = 0; col < finalData[0].length; col++) {
         let height = finalData[row][col];
+        height = this.map_range(height, 0, 28, 0, 1.5); 
         console.log(height);
-        height = this.map_range(height, 0, 28, 0, 1.5)
-        let heightSegments = height * 4;
-        if (height === 0) {
-          height = 0.1;
-          heightSegments = 1;
-        }
+        let heightSegments = Math.ceil(height * 4);
+
         let markColor = new THREE.Color("silver");
         let position = new THREE.Vector3(row, 0, col)
         let geometry = new THREE.BoxGeometry(0.5, height, 0.5, 2, heightSegments, 2);
@@ -344,47 +368,6 @@ class Visualization {
 
     }
 
-
-    // let j, i = 0; 
-    // for (j = 0; j < models.length; j++) {
-    //   let arr = [];
-    //   for (i = 0; i < cars.length; i++) {
-    //     let element = cars[i];
-    //     if (element.Model === models[j]) {
-    //       arr.push(element);
-    //     }
-
-    //   }
-    //   dataColumns[j] = arr; 
-    // }
-
-    // console.log(dataColumns); // Array of arrays per model year 
-
-    // let m, n = 0; 
-    // for (m = 0; m < dataColumns.length; m++) {
-    //   const yearArray = dataColumns[m];
-    //   for (n = 0; n < yearArray.length; n++) {
-    //     console.log(yearArray[n]);
-    //     for (let i = 0; i < cylinders.length; i++) {
-
-    //     }
-    //     finalData[m]; 
-    //   }
-
-    // }
-
-
-
-    // if (params.data === 'Scatterplot') {
-    //   // Initialising the scatterplot
-    //   this.createScatterplotVisualization();
-    // } else if (params.data === 'Terrainmap') {
-    //   // Initialising the terrainmap
-    //   this.createTerrainMapVisualization(); 
-    // } else if (params.data === 'Barchart') {
-    //   // Initialising the barchart
-    //   // TODO: Implement a 3d barchart
-    // }
   }
 
   /**
@@ -405,23 +388,7 @@ class Visualization {
   }
 
 
-  handleNewVisualization() {
-    // remove old data from scene and picking scene
-    dataPoints.children = [];
-    pickingPoints.children = [];
 
-    // Reconstruct the new visualisation
-    if (params.data === 'Scatterplot') {
-      // Initialising the scatterplot
-      this.createScatterplotVisualization();
-    } else if (params.data === 'Terrainmap') {
-      // Initialising the terrainmap
-      this.createTerrainMapVisualization();
-    } else if (params.data === 'Barchart') {
-      // Initialising the barchart
-      // TODO: Implement a 3d barchart
-    }
-  }
 
   createScatterplotVisualization() {
 

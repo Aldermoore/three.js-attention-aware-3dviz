@@ -9,6 +9,7 @@ import { Resizer } from './systems/Resizer.js';
 import { Loop } from './systems/Loop.js';
 import { createControls } from './systems/controls.js'
 import iris from './data/iris.json' assert {type: 'json'}; //Our data
+import elevation from './data/mt_bruno_elevation.json' assert {type: 'json'}; //Our data
 // import { ViewHelper } from './components/viewHelper.js';
 // THREEjs libraries 
 import TWEEN from '@tweenjs/tween.js'
@@ -104,9 +105,7 @@ var visibleObjectsDiv;
 
 
 const params = {
-  x: 0,
-  y: 0,
-  z: 0,
+  data: 'Terrainmap',
   areaPickSize: 361, //should be an odd number!!
   Start: function () { viz.startExperiment() },
   Stop: function () { viz.stopExperiment() },
@@ -213,6 +212,90 @@ class Visualization {
     scene.add(dataPoints);
     pickingScene.add(pickingPoints);
 
+
+    /**
+     * Setting up controllers 
+     */
+    controller1 = renderer.xr.getController(0);
+    controller1.addEventListener('selectstart', this.onSelectStart);
+    controller1.addEventListener('selectend', this.onSelectEnd);
+    controller1.addEventListener('connected', function (event) {
+
+      this.add(this.buildController(event.data));
+
+    });
+    controller1.addEventListener('disconnected', function () {
+
+      this.remove(this.children[0]);
+
+    });
+    scene.add(controller1);
+
+    controller2 = renderer.xr.getController(1);
+    controller2.addEventListener('selectstart', this.onSelectStart);
+    controller2.addEventListener('selectend', this.onSelectEnd);
+    controller2.addEventListener('connected', function (event) {
+
+      this.add(this.buildController(event.data));
+
+    });
+    controller2.addEventListener('disconnected', function () {
+
+      this.remove(this.children[0]);
+
+    });
+    scene.add(controller2);
+
+    // The XRControllerModelFactory will automatically fetch controller models
+    // that match what the user is holding as closely as possible. The models
+    // should be attached to the object returned from getControllerGrip in
+    // order to match the orientation of the held device.
+
+    const controllerModelFactory = new XRControllerModelFactory();
+
+    controllerGrip1 = renderer.xr.getControllerGrip(0);
+    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+    scene.add(controllerGrip1);
+
+    controllerGrip2 = renderer.xr.getControllerGrip(1);
+    controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+    scene.add(controllerGrip2);
+
+
+
+    if (params.data === 'Scatterplot') {
+      // Initialising the scatterplot
+      this.createScatterplotVisualization();
+    } else if (params.data === 'Terrainmap') {
+      // Initialising the terrainmap
+      this.createTerrainMapVisualization(); 
+    } else if (params.data === 'Barchart') {
+      // Initialising the barchart
+      // TODO: Implement a 3d barchart
+    }
+  }
+
+
+  handleNewVisualization() {
+    // remove old data from scene and picking scene
+    dataPoints.children = [];
+    pickingPoints.children = [];  
+
+    // Reconstruct the new visualisation
+    if (params.data === 'Scatterplot') {
+      // Initialising the scatterplot
+      this.createScatterplotVisualization();
+    } else if (params.data === 'Terrainmap') {
+      // Initialising the terrainmap
+      this.createTerrainMapVisualization(); 
+    } else if (params.data === 'Barchart') {
+      // Initialising the barchart
+      // TODO: Implement a 3d barchart
+    }
+  }
+
+  createScatterplotVisualization() {
+
     // TODO nice way for the user to choose this, rather than being hardcoded 
     var xAttr = Object.keys(iris[0])[0] // iris.sepalLength; 
     var yAttr = Object.keys(iris[0])[1] // iris.sepalWidth;
@@ -268,69 +351,13 @@ class Visualization {
       this.createSphere(index + 1, color, new THREE.Vector3(xVal, yVal, zVal), 0.05);
 
     } // for
-
-
-    const textureLoader = new THREE.TextureLoader();
-    const decalDiffuse = textureLoader.load('earth-day.jpg');
-
-
-    // let geometry = new THREE.SphereGeometry(1);
-    // let material = new THREE.MeshPhongMaterial({ color: '#ffffff', vertexColors: false, transparent: true, opacity: 0.9, alphaHash: false });
-    // let sphere = new THREE.Mesh(geometry, material);
-    // sphere.position.set(2.5, 0, 2.5);
-    // scene.add(sphere); 
-    // material = new THREE.MeshPhongMaterial({ color: 'white', flatShading: false, vertexColors: false});
-    // let pickingSphere = new THREE.Mesh(geometry, material);
-    // pickingSphere.position.set(2.5, 0, 2.5);
-    // pickingScene.add(pickingSphere);
-
-
-    controller1 = renderer.xr.getController(0);
-    controller1.addEventListener('selectstart', this.onSelectStart);
-    controller1.addEventListener('selectend', this.onSelectEnd);
-    controller1.addEventListener('connected', function (event) {
-
-      this.add(this.buildController(event.data));
-
-    });
-    controller1.addEventListener('disconnected', function () {
-
-      this.remove(this.children[0]);
-
-    });
-    scene.add(controller1);
-
-    controller2 = renderer.xr.getController(1);
-    controller2.addEventListener('selectstart', this.onSelectStart);
-    controller2.addEventListener('selectend', this.onSelectEnd);
-    controller2.addEventListener('connected', function (event) {
-
-      this.add(this.buildController(event.data));
-
-    });
-    controller2.addEventListener('disconnected', function () {
-
-      this.remove(this.children[0]);
-
-    });
-    scene.add(controller2);
-
-    // The XRControllerModelFactory will automatically fetch controller models
-    // that match what the user is holding as closely as possible. The models
-    // should be attached to the object returned from getControllerGrip in
-    // order to match the orientation of the held device.
-
-    const controllerModelFactory = new XRControllerModelFactory();
-
-    controllerGrip1 = renderer.xr.getControllerGrip(0);
-    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-    scene.add(controllerGrip1);
-
-    controllerGrip2 = renderer.xr.getControllerGrip(1);
-    controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
-    scene.add(controllerGrip2);
   }
 
+
+
+  createTerrainMapVisualization() {
+    this.createTerrainMap(1, colorScale[3], new THREE.Vector3(-1, 0, -1), 1);
+  }
 
 
 
@@ -378,7 +405,7 @@ class Visualization {
 
 
     if (controller.userData.isSelecting) {
-      
+
       this.emphasiseLeastSeenObjects(10);
       this.deemphasiseMostSeenObjects(10);
     }
@@ -403,11 +430,7 @@ class Visualization {
 
   makeGUI(visualization) {
     gui = new GUI();
-    const dataSet = gui.addFolder('Dataset properties');
-    dataSet.add(params, 'x');
-    dataSet.add(params, 'y');
-    dataSet.add(params, 'z');
-    dataSet.close();
+    gui.add(params, 'data', ['Scatterplot', 'Terrainmap', 'Barchart']).onFinishChange(() => this.handleNewVisualization());
     const areaPick = gui.add(params, 'areaPickSize', 11, 501, 10);
     areaPick.name("Size of gaze area (px Ø)")
     areaPick.onFinishChange(function (v) {
@@ -630,6 +653,101 @@ class Visualization {
   }
 
 
+
+  /**
+   * 
+   * @param {number} id ID of the mesh created
+   * @param {number} color Colour of the mesh created
+   * @param {THREE.Vector3} position Vector position of the mesh created
+   */
+  createTerrainMap(id, markColor, position, size) {
+    let geometry = new THREE.PlaneGeometry(size, size, 24, 23);
+    geometry.rotateX(-Math.PI * 0.5); // rotating the geometry to be vertical
+    let material = new THREE.MeshPhongMaterial({ color: color, side: THREE.DoubleSide, wireframe: false, flatShading: true, userData: { oldColor: markColor }, vertexColors: true });
+
+    material.userData.originalColor = markColor;
+    let plane = new THREE.Mesh(geometry, material);
+    console.log(geometry.attributes.position.count);
+    console.log(geometry.attributes.position.array.length);
+    facesAttentionStore[id] = new Array(geometry.attributes.position.count * 3); // TODO: find the optimal size for this array! 
+    facesAttentionStore[id].fill(0);
+    objectAttentionStore[id] = 0;
+    tempObjectAttentionStore[id] = 50;
+
+
+    plane.name = id;
+    plane.position.set(position.x, position.y, position.z);
+
+    let row = 0;
+    let col = 0;
+    for (let i = 1; i < plane.geometry.attributes.position.array.length; i += 3) {
+      let val = (elevation[col][row]);
+      val = this.map_range(val, 0, 300, 0, 0.5);
+      plane.geometry.attributes.position.array[i] = val;
+      col++;
+      if (col > 24) {
+        col = 0;
+        row++;
+      }
+    }
+
+    this.createTerrainMapBuffer(id, position, size);
+    // let pickingTerrainMap = this.createTerrainMapBuffer(geometry, plane);
+    // let pickingMesh = new THREE.Mesh(pickingTerrainMap, pickingMaterial);
+    // pickingMesh.name = id;
+
+    plane.geometry = plane.geometry.toNonIndexed();
+    // sphere.material.vertexColors = true;
+    this.applyVertexColors(plane.geometry, new THREE.Color(markColor)); // markColor
+    // sphere.material.needsUpdate;
+
+    dataPoints.add(plane);
+    // pickingPoints.add(pickingMesh);
+    // return { plane, pickingMesh };
+  }
+
+
+  /**
+   * 
+   * @param {THREE.SphereGeometry} geometry The geometry who's attributes to copy
+   * @param {THREE.Mesh} mesh The mesh who's position and ID to copy
+   * @returns THREE.SphereGeometry constructed from the input geometry and mesh
+   */
+  createTerrainMapBuffer(id, position, size) {
+    let geometry = new THREE.PlaneGeometry(size, size, 24, 23);
+    geometry.rotateX(-Math.PI * 0.5); // rotating the geometry to be vertical
+    // let material = new THREE.MeshPhongMaterial({side: THREE.DoubleSide, wireframe: false, flatShading: true, vertexColors: true });
+
+    // let plane = new THREE.Mesh(geometry, material);
+
+    geometry.name = id;
+
+
+    // let pickingTerrainMap = this.createTerrainMapBuffer(geometry, plane);
+    let pickingMesh = new THREE.Mesh(geometry, pickingMaterial);
+    pickingMesh.name = id;
+    pickingMesh.position.set(position.x, position.y, position.z);
+
+    let row = 0;
+    let col = 0;
+    for (let i = 1; i < geometry.attributes.position.array.length; i += 3) {
+      let val = (elevation[col][row]);
+      val = this.map_range(val, 0, 300, 0, 1);
+      geometry.attributes.position.array[i] = val;
+      col++;
+      if (col > 24) {
+        col = 0;
+        row++;
+      }
+    }
+
+    pickingMesh.geometry = pickingMesh.geometry.toNonIndexed();
+    this.applyUniqueVertexColors(pickingMesh.geometry, geometry.name); // , color.setHex(mesh.name));
+    pickingPoints.add(pickingMesh);
+    // return buffer;
+  }
+
+
   /**
    * Recolors the object in the specified color
    * @param {THREE.BufferGeometry} geometry The geometry in the scene to recolor
@@ -669,6 +787,7 @@ class Visualization {
       Color needs to be converted from Linear to SRGB because reasons 
       (if not the color will be wrong for all but primary (e.g. R=1,B=0,G=0) and secondary (e.g. R=1,B=1,G=0) colors!)
       */
+
       color.convertLinearToSRGB();
       colors.push(color.r, color.g, color.b);
       colors.push(color.r, color.g, color.b);
@@ -1156,15 +1275,15 @@ class Visualization {
 
   emphasiseLeastSeenObjects(numberOfObjects) {
     let attentionStore = objectAttentionStore;
-      attentionStore.sort();
-      let objectsToBeEmphasised = attentionStore.slice(numberOfObjects - 1);
+    attentionStore.sort();
+    let objectsToBeEmphasised = attentionStore.slice(numberOfObjects - 1);
 
-      dataPoints.children.forEach(element => {
-        if (objectsToBeEmphasised.includes(element.name)) {
-          this.applyVertexColors(element.geometry, new THREE.Color('orange'));
-        }
+    dataPoints.children.forEach(element => {
+      if (objectsToBeEmphasised.includes(element.name)) {
+        this.applyVertexColors(element.geometry, new THREE.Color('orange'));
+      }
 
-      });
+    });
 
     // let attentionStore = objectAttentionStore;
     // attentionStore.sort();
@@ -1184,7 +1303,7 @@ class Visualization {
 
   deemphasiseMostSeenObjects(numberOfObjects) {
     let attentionStore = objectAttentionStore;
-    attentionStore.sort(); 
+    attentionStore.sort();
     attentionStore.reverse();
     let objectsToBeDeemphasised = attentionStore.slice(numberOfObjects - 1);
     dataPoints.children.forEach(element => {

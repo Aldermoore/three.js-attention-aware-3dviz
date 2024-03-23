@@ -3,6 +3,7 @@ import { createCamera } from './components/camera.js';
 import { createLights } from './components/lights.js';
 import { createScene } from './components/scene.js';
 import { createOrthograpichCamera } from './components/cameraOrthographic.js';
+import { makeTextSprite } from './components/textSprite.js';
 
 import { createRenderer } from './systems/renderer.js';
 import { Resizer } from './systems/Resizer.js';
@@ -34,6 +35,10 @@ let scene;
 let loop;
 // let viewHelper;
 let stats;
+
+let xAxis, yAxis, zAxis;
+let xLabel, yLabel, zLabel;
+let xValueUpper, xValueLower, yValueUpper, yValueLower, zValueUpper, zValueLower;
 
 let dataPoints;
 let pickingPoints;
@@ -264,10 +269,10 @@ class Visualization {
       this.createScatterplotVisualization();
     } else if (params.data === 'Terrainmap') {
       // Initialising the terrainmap
-      this.createTerrainMapVisualization(); 
+      this.createTerrainMapVisualization();
     } else if (params.data === 'Barchart') {
       // Initialising the barchart
-      this.createBarChartVisualization(); 
+      this.createBarChartVisualization();
     }
   }
 
@@ -277,6 +282,7 @@ class Visualization {
     // remove old data from scene and picking scene
     dataPoints.children = [];
     pickingPoints.children = [];
+    scene.remove(xAxis, yAxis, zAxis, xLabel, yLabel, zLabel, xValueLower, xValueUpper, yValueLower, yValueUpper, zValueLower, zValueUpper);
 
     // Reconstruct the new visualisation
     if (params.data === 'Scatterplot') {
@@ -287,7 +293,7 @@ class Visualization {
       this.createTerrainMapVisualization();
     } else if (params.data === 'Barchart') {
       // Initialising the barchart
-      this.createBarChartVisualization(); 
+      this.createBarChartVisualization();
     }
   }
 
@@ -305,7 +311,6 @@ class Visualization {
       finalData[i].fill(0);
 
     }
-    console.log(finalData);
 
     for (let i = 0; i < cars.length; i++) {
       let model, cylinder = 0;
@@ -320,29 +325,26 @@ class Visualization {
           cylinder = k;
         }
       }
-      console.log(model, cylinder);
       finalData[model][cylinder] += 1;
     }
-
-    console.log("here's the final data:", finalData);
 
 
     let id = 1;
     for (let row = 0; row < finalData.length; row++) {
       for (let col = 0; col < finalData[0].length; col++) {
         let height = finalData[row][col];
-        height = this.map_range(height, 0, 28, 0, 1.5); 
-        console.log(height);
+        height = this.map_range(height, 0, 28, 0, 1);
         let heightSegments = Math.ceil(height * 4);
 
-        let markColor = new THREE.Color("silver");
-        let position = new THREE.Vector3(row, 0, col)
-        let geometry = new THREE.BoxGeometry(0.5, height, 0.5, 2, heightSegments, 2);
-        let material = new THREE.MeshPhongMaterial({ color: markColor, wireframe: false, flatShading: false, userData: { oldColor: markColor }, vertexColors: true });
+        let markColor = new THREE.Color(colorScale[col]);
+        let position = new THREE.Vector3(col / 7, 0, row / 7)
+        let geometry = new THREE.BoxGeometry(0.1, height, 0.1, 2, heightSegments, 2);
+        let material = new THREE.MeshPhongMaterial({ color: "silver", wireframe: false, flatShading: true, userData: { oldColor: markColor }, vertexColors: true });
         material.userData.originalColor = markColor;
 
 
         let box = new THREE.Mesh(geometry, material);
+
 
 
         facesAttentionStore[id] = new Array(geometry.attributes.position.count * 2); // TODO: find the optimal size for this array! 
@@ -368,6 +370,71 @@ class Visualization {
 
     }
 
+
+    // Draw axes for the visualisation
+    const geometryX = new THREE.BufferGeometry();
+    geometryX.setFromPoints([new THREE.Vector3(-0.1, 0, -0.1), new THREE.Vector3(0.68, 0, -0.1)]);
+    xAxis = new THREE.Line(geometryX, new THREE.LineBasicMaterial());
+    scene.add(xAxis);
+
+    const geometryY = new THREE.BufferGeometry();
+    geometryY.setFromPoints([new THREE.Vector3(-0.1, 0, -0.1), new THREE.Vector3(-0.1, 1, -0.1)]);
+    yAxis = new THREE.Line(geometryY, new THREE.LineBasicMaterial());
+    scene.add(yAxis);
+
+    const geometryZ = new THREE.BufferGeometry();
+    geometryZ.setFromPoints([new THREE.Vector3(-0.1, 0, -0.1), new THREE.Vector3(-0.1, 0, 1.8)]);
+    zAxis = new THREE.Line(geometryZ, new THREE.LineBasicMaterial());
+    scene.add(zAxis);
+
+
+    // Draw labels on the axes 
+    xLabel = makeTextSprite("Cylinders", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    xLabel.center = new THREE.Vector2(0.2, 0.5); 
+    xLabel.position.set(0.35, 0, -0.2); 
+    scene.add(xLabel);
+
+    xValueUpper = makeTextSprite("3", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    xValueUpper.center = new THREE.Vector2(0, 0.5); 
+    xValueUpper.position.set(0, -0.1, -0.15); 
+    scene.add(xValueUpper);
+
+    xValueLower = makeTextSprite("8", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    xValueLower.center = new THREE.Vector2(0, 0.5); 
+    xValueLower.position.set(0.6, -0.1, -0.15); 
+    scene.add(xValueLower);
+
+
+    zLabel = makeTextSprite("Model Year", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    zLabel.center = new THREE.Vector2(0.2, 0.5); 
+    zLabel.position.set(-0.2, 0, 1); 
+    scene.add(zLabel);
+
+    zValueLower = makeTextSprite("1970", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    zValueLower.center = new THREE.Vector2(0.1, 0.5); 
+    zValueLower.position.set(-0.2, -0.1, -0); 
+    scene.add(zValueLower);
+
+    zValueUpper = makeTextSprite("1982", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    zValueUpper.center = new THREE.Vector2(0.1, 0.5); 
+    zValueUpper.position.set(-0.2, -0.1, 1.75); 
+    scene.add(zValueUpper);
+
+
+    yLabel = makeTextSprite("No. cars", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    yLabel.center = new THREE.Vector2(0.2, 0.5); 
+    yLabel.position.set(-0.2, 0.5, -0.2); 
+    scene.add(yLabel);
+
+    yValueLower = makeTextSprite("0", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    yValueLower.center = new THREE.Vector2(0, 0.5); 
+    yValueLower.position.set(-0.2, -0.1, -0.2); 
+    scene.add(yValueLower);
+
+    yValueUpper = makeTextSprite("28", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    yValueUpper.center = new THREE.Vector2(0, 0.5); 
+    yValueUpper.position.set(-0.2, 0.9, -0.2); 
+    scene.add(yValueUpper);
   }
 
   /**
@@ -414,11 +481,17 @@ class Visualization {
     let xAttrMax = Math.max.apply(null, iris.map(function (o) { return o.sepalLength }));
     let xAttrMin = Math.min.apply(null, iris.map(function (o) { return o.sepalLength }));
 
+    console.log(xAttrMin, xAttrMax)
+
     let yAttrMax = Math.max.apply(null, iris.map(function (o) { return o.sepalWidth }));
     let yAttrMin = Math.min.apply(null, iris.map(function (o) { return o.sepalWidth }));
 
+    console.log(yAttrMin, yAttrMax)
+
     let zAttrMax = Math.max.apply(null, iris.map(function (o) { return o.petalWidth }));
     let zAttrMin = Math.min.apply(null, iris.map(function (o) { return o.petalWidth }));
+
+    console.log(zAttrMin, zAttrMax)
 
     for (let index = 0; index < iris.length; index++) {
 
@@ -438,21 +511,153 @@ class Visualization {
       } else { color = colorScale[3] }
 
       // Map the data to a specific plot area 
-      let xVal = this.map_range(element.sepalLength, xAttrMin, xAttrMax, 1, 5);
-      let yVal = this.map_range(element.sepalWidth, yAttrMin, yAttrMax, -1, 2);
-      let zVal = this.map_range(element.petalWidth, zAttrMin, zAttrMax, 1, 5);
+      let xVal = this.map_range(element.sepalLength, xAttrMin, xAttrMax, 0, 2);
+      let yVal = this.map_range(element.sepalWidth, yAttrMin, yAttrMax, 0, 1.5);
+      let zVal = this.map_range(element.petalWidth, zAttrMin, zAttrMax, 0, 2);
 
       // TODO: Nice way to bind data-dimensions to scene dimensions (X,Y,Z), and to mark-attributes (size, height/width/thickness, colour, orientation) depending on the type of mark. 
       // TODO: Normalise input data to a desired, configurable size of the visualization. 
-      this.createSphere(index + 1, color, new THREE.Vector3(xVal, yVal, zVal), 0.05);
+      this.createSphere(index + 1, color, new THREE.Vector3(xVal, yVal, zVal), 0.03);
 
     } // for
+
+
+    // Draw axes for the visualisation
+    const geometryX = new THREE.BufferGeometry();
+    geometryX.setFromPoints([new THREE.Vector3(0, 0, 2), new THREE.Vector3(2, 0, 2)]);
+    xAxis = new THREE.Line(geometryX, new THREE.LineBasicMaterial());
+    scene.add(xAxis);
+
+    const geometryY = new THREE.BufferGeometry();
+    geometryY.setFromPoints([new THREE.Vector3(0, 0, 2), new THREE.Vector3(0, 1.5, 2)]);
+    yAxis = new THREE.Line(geometryY, new THREE.LineBasicMaterial());
+    scene.add(yAxis);
+
+    const geometryZ = new THREE.BufferGeometry();
+    geometryZ.setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 2)]);
+    zAxis = new THREE.Line(geometryZ, new THREE.LineBasicMaterial());
+    scene.add(zAxis);
+
+        // Draw labels on the axes 
+        xLabel = makeTextSprite("Sepal Length", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+        xLabel.center = new THREE.Vector2(0.2, 0.5); 
+        xLabel.position.set(1, -0.1, 2.1); 
+        scene.add(xLabel);
+    
+        xValueUpper = makeTextSprite("4.3", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+        xValueUpper.center = new THREE.Vector2(0, 0.5); 
+        xValueUpper.position.set(0, -0.1, 2.1); 
+        scene.add(xValueUpper);
+    
+        xValueLower = makeTextSprite("7.9", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+        xValueLower.center = new THREE.Vector2(0, 0.5); 
+        xValueLower.position.set(2, -0.1, 2.1); 
+        scene.add(xValueLower);
+    
+    
+        zLabel = makeTextSprite("Petal Width", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+        zLabel.center = new THREE.Vector2(0.2, 0.5); 
+        zLabel.position.set(-0.1, -0.1, 1); 
+        scene.add(zLabel);
+    
+        zValueLower = makeTextSprite("0.1", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+        zValueLower.center = new THREE.Vector2(0, 0.5); 
+        zValueLower.position.set(-0.2, -0.1, -0); 
+        scene.add(zValueLower);
+    
+        zValueUpper = makeTextSprite("2.5", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+        zValueUpper.center = new THREE.Vector2(0, 0.5); 
+        zValueUpper.position.set(-0.2, -0.1, 2); 
+        scene.add(zValueUpper);
+    
+    
+        yLabel = makeTextSprite("Sepal Width", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+        yLabel.center = new THREE.Vector2(0.2, 0.5); 
+        yLabel.position.set(-0.1, 0.5, 2.1); 
+        scene.add(yLabel);
+    
+        yValueLower = makeTextSprite("2", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+        yValueLower.center = new THREE.Vector2(0, 0.5); 
+        yValueLower.position.set(-0.1, 0.01, 2.1); 
+        scene.add(yValueLower);
+    
+        yValueUpper = makeTextSprite("4.4", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+        yValueUpper.center = new THREE.Vector2(0, 0.5); 
+        yValueUpper.position.set(-0.1, 1.4, 2.1); 
+        scene.add(yValueUpper);
+
   }
 
 
 
   createTerrainMapVisualization() {
-    this.createTerrainMap(1, colorScale[3], new THREE.Vector3(-1, 0, -1), 1);
+    this.createTerrainMap(1, colorScale[3], new THREE.Vector3(1, 0, 1), 2);
+
+    // Draw axes for the visualisation
+    const geometryX = new THREE.BufferGeometry();
+    geometryX.setFromPoints([new THREE.Vector3(-0.1, 0.1, -0.1), new THREE.Vector3(2.1, 0.1, -0.1)]);
+    xAxis = new THREE.Line(geometryX, new THREE.LineBasicMaterial());
+    scene.add(xAxis);
+
+    const geometryY = new THREE.BufferGeometry();
+    geometryY.setFromPoints([new THREE.Vector3(-0.1, 0.1, -0.1), new THREE.Vector3(-0.1, 1.5, -0.1)]);
+    yAxis = new THREE.Line(geometryY, new THREE.LineBasicMaterial());
+    scene.add(yAxis);
+
+    const geometryZ = new THREE.BufferGeometry();
+    geometryZ.setFromPoints([new THREE.Vector3(-0.1, 0.1, -0.1), new THREE.Vector3(-0.1, 0.1, 2.1)]);
+    zAxis = new THREE.Line(geometryZ, new THREE.LineBasicMaterial());
+    scene.add(zAxis);
+
+
+
+    // Draw labels on the axes 
+    xLabel = makeTextSprite("Lattitude", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    xLabel.center = new THREE.Vector2(0.2, 0.5); 
+    xLabel.position.set(1, 0, -0.2); 
+    scene.add(xLabel);
+
+    xValueUpper = makeTextSprite("0", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    xValueUpper.center = new THREE.Vector2(0, 0.5); 
+    xValueUpper.position.set(0, -0.1, -0.15); 
+    scene.add(xValueUpper);
+
+    xValueLower = makeTextSprite("100", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    xValueLower.center = new THREE.Vector2(0, 0.5); 
+    xValueLower.position.set(2, -0.1, -0.15); 
+    scene.add(xValueLower);
+
+
+    zLabel = makeTextSprite("Longitude", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    zLabel.center = new THREE.Vector2(0.2, 0.5); 
+    zLabel.position.set(-0.2, 0, 1); 
+    scene.add(zLabel);
+
+    zValueLower = makeTextSprite("0", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    zValueLower.center = new THREE.Vector2(0.1, 0.5); 
+    zValueLower.position.set(-0.2, -0.1, -0); 
+    scene.add(zValueLower);
+
+    zValueUpper = makeTextSprite("100", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    zValueUpper.center = new THREE.Vector2(0.1, 0.5); 
+    zValueUpper.position.set(-0.2, -0.1, 2); 
+    scene.add(zValueUpper);
+
+
+    yLabel = makeTextSprite("Elevation", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    yLabel.center = new THREE.Vector2(0.2, 0.5); 
+    yLabel.position.set(-0.2, 0.5, -0.2); 
+    scene.add(yLabel);
+
+    yValueLower = makeTextSprite("0", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    yValueLower.center = new THREE.Vector2(0, 0.5); 
+    yValueLower.position.set(-0.2, -0.1, -0.2); 
+    scene.add(yValueLower);
+
+    yValueUpper = makeTextSprite("300", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
+    yValueUpper.center = new THREE.Vector2(0, 0.5); 
+    yValueUpper.position.set(-0.2, 1.3, -0.2); 
+    scene.add(yValueUpper);
   }
 
 
@@ -764,8 +969,6 @@ class Visualization {
 
     material.userData.originalColor = markColor;
     let plane = new THREE.Mesh(geometry, material);
-    console.log(geometry.attributes.position.count);
-    console.log(geometry.attributes.position.array.length);
     facesAttentionStore[id] = new Array(geometry.attributes.position.count * 3); // TODO: find the optimal size for this array! 
     facesAttentionStore[id].fill(0);
     objectAttentionStore[id] = 0;
@@ -779,7 +982,7 @@ class Visualization {
     let col = 0;
     for (let i = 1; i < plane.geometry.attributes.position.array.length; i += 3) {
       let val = (elevation[col][row]);
-      val = this.map_range(val, 0, 300, 0, 0.5);
+      val = this.map_range(val, 0, 300, 0, 1);
       plane.geometry.attributes.position.array[i] = val;
       col++;
       if (col > 24) {

@@ -83,7 +83,8 @@ var attentionList;
 
 
 let experimentStarted = false;
-var liveUpdate = false;
+let liveUpdate = false;
+let experimentPaused = false;
 
 
 
@@ -112,8 +113,8 @@ const params = {
   Show_Results: function () { viz.showExperimentResults() },
   Reset: function () { viz.resetExperimentData() },
   LiveUpdate: false,
-  allowDeemphasis: true,
-  allowEmphasis: true,
+  allowDeemphasis: false,
+  allowEmphasis: false,
   resetColors: function () { viz.resetColorsOnAllPoints() },
   deemphasizeThreshold: 90,
   emphasizeThreshold: 5,
@@ -389,51 +390,51 @@ class Visualization {
 
 
     // Draw labels on the axes 
-    xLabel = makeTextSprite("Cylinders", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    xLabel.center = new THREE.Vector2(0.2, 0.5); 
-    xLabel.position.set(0.35, 0, -0.2); 
+    xLabel = makeTextSprite("Cylinders", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xLabel.center = new THREE.Vector2(0.2, 0.5);
+    xLabel.position.set(0.35, 0, -0.2);
     scene.add(xLabel);
 
-    xValueUpper = makeTextSprite("3", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    xValueUpper.center = new THREE.Vector2(0, 0.5); 
-    xValueUpper.position.set(0, -0.1, -0.15); 
+    xValueUpper = makeTextSprite("3", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueUpper.center = new THREE.Vector2(0, 0.5);
+    xValueUpper.position.set(0, -0.1, -0.15);
     scene.add(xValueUpper);
 
-    xValueLower = makeTextSprite("8", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    xValueLower.center = new THREE.Vector2(0, 0.5); 
-    xValueLower.position.set(0.6, -0.1, -0.15); 
+    xValueLower = makeTextSprite("8", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueLower.center = new THREE.Vector2(0, 0.5);
+    xValueLower.position.set(0.6, -0.1, -0.15);
     scene.add(xValueLower);
 
 
-    zLabel = makeTextSprite("Model Year", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    zLabel.center = new THREE.Vector2(0.2, 0.5); 
-    zLabel.position.set(-0.2, 0, 1); 
+    zLabel = makeTextSprite("Model Year", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zLabel.center = new THREE.Vector2(0.2, 0.5);
+    zLabel.position.set(-0.2, 0, 1);
     scene.add(zLabel);
 
-    zValueLower = makeTextSprite("1970", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    zValueLower.center = new THREE.Vector2(0.1, 0.5); 
-    zValueLower.position.set(-0.2, -0.1, -0); 
+    zValueLower = makeTextSprite("1970", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueLower.center = new THREE.Vector2(0.1, 0.5);
+    zValueLower.position.set(-0.2, -0.1, -0);
     scene.add(zValueLower);
 
-    zValueUpper = makeTextSprite("1982", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    zValueUpper.center = new THREE.Vector2(0.1, 0.5); 
-    zValueUpper.position.set(-0.2, -0.1, 1.75); 
+    zValueUpper = makeTextSprite("1982", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueUpper.center = new THREE.Vector2(0.1, 0.5);
+    zValueUpper.position.set(-0.2, -0.1, 1.75);
     scene.add(zValueUpper);
 
 
-    yLabel = makeTextSprite("No. cars", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    yLabel.center = new THREE.Vector2(0.2, 0.5); 
-    yLabel.position.set(-0.2, 0.5, -0.2); 
+    yLabel = makeTextSprite("No. cars", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yLabel.center = new THREE.Vector2(0.2, 0.5);
+    yLabel.position.set(-0.2, 0.5, -0.2);
     scene.add(yLabel);
 
-    yValueLower = makeTextSprite("0", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    yValueLower.center = new THREE.Vector2(0, 0.5); 
-    yValueLower.position.set(-0.2, -0.1, -0.2); 
+    yValueLower = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueLower.center = new THREE.Vector2(0, 0.5);
+    yValueLower.position.set(-0.2, -0.1, -0.2);
     scene.add(yValueLower);
 
-    yValueUpper = makeTextSprite("28", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    yValueUpper.center = new THREE.Vector2(0, 0.5); 
-    yValueUpper.position.set(-0.2, 0.9, -0.2); 
+    yValueUpper = makeTextSprite("28", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueUpper.center = new THREE.Vector2(0, 0.5);
+    yValueUpper.position.set(-0.2, 0.9, -0.2);
     scene.add(yValueUpper);
   }
 
@@ -538,53 +539,53 @@ class Visualization {
     zAxis = new THREE.Line(geometryZ, new THREE.LineBasicMaterial());
     scene.add(zAxis);
 
-        // Draw labels on the axes 
-        xLabel = makeTextSprite("Sepal Length", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-        xLabel.center = new THREE.Vector2(0.2, 0.5); 
-        xLabel.position.set(1, -0.1, 2.1); 
-        scene.add(xLabel);
-    
-        xValueUpper = makeTextSprite("4.3", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-        xValueUpper.center = new THREE.Vector2(0, 0.5); 
-        xValueUpper.position.set(0, -0.1, 2.1); 
-        scene.add(xValueUpper);
-    
-        xValueLower = makeTextSprite("7.9", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-        xValueLower.center = new THREE.Vector2(0, 0.5); 
-        xValueLower.position.set(2, -0.1, 2.1); 
-        scene.add(xValueLower);
-    
-    
-        zLabel = makeTextSprite("Petal Width", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-        zLabel.center = new THREE.Vector2(0.2, 0.5); 
-        zLabel.position.set(-0.1, -0.1, 1); 
-        scene.add(zLabel);
-    
-        zValueLower = makeTextSprite("0.1", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-        zValueLower.center = new THREE.Vector2(0, 0.5); 
-        zValueLower.position.set(-0.2, -0.1, -0); 
-        scene.add(zValueLower);
-    
-        zValueUpper = makeTextSprite("2.5", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-        zValueUpper.center = new THREE.Vector2(0, 0.5); 
-        zValueUpper.position.set(-0.2, -0.1, 2); 
-        scene.add(zValueUpper);
-    
-    
-        yLabel = makeTextSprite("Sepal Width", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-        yLabel.center = new THREE.Vector2(0.2, 0.5); 
-        yLabel.position.set(-0.1, 0.5, 2.1); 
-        scene.add(yLabel);
-    
-        yValueLower = makeTextSprite("2", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-        yValueLower.center = new THREE.Vector2(0, 0.5); 
-        yValueLower.position.set(-0.1, 0.01, 2.1); 
-        scene.add(yValueLower);
-    
-        yValueUpper = makeTextSprite("4.4", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-        yValueUpper.center = new THREE.Vector2(0, 0.5); 
-        yValueUpper.position.set(-0.1, 1.4, 2.1); 
-        scene.add(yValueUpper);
+    // Draw labels on the axes 
+    xLabel = makeTextSprite("Sepal Length", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xLabel.center = new THREE.Vector2(0.2, 0.5);
+    xLabel.position.set(1, -0.1, 2.1);
+    scene.add(xLabel);
+
+    xValueUpper = makeTextSprite("4.3", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueUpper.center = new THREE.Vector2(0, 0.5);
+    xValueUpper.position.set(0, -0.1, 2.1);
+    scene.add(xValueUpper);
+
+    xValueLower = makeTextSprite("7.9", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueLower.center = new THREE.Vector2(0, 0.5);
+    xValueLower.position.set(2, -0.1, 2.1);
+    scene.add(xValueLower);
+
+
+    zLabel = makeTextSprite("Petal Width", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zLabel.center = new THREE.Vector2(0.2, 0.5);
+    zLabel.position.set(-0.1, -0.1, 1);
+    scene.add(zLabel);
+
+    zValueLower = makeTextSprite("0.1", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueLower.center = new THREE.Vector2(0, 0.5);
+    zValueLower.position.set(-0.2, -0.1, -0);
+    scene.add(zValueLower);
+
+    zValueUpper = makeTextSprite("2.5", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueUpper.center = new THREE.Vector2(0, 0.5);
+    zValueUpper.position.set(-0.2, -0.1, 2);
+    scene.add(zValueUpper);
+
+
+    yLabel = makeTextSprite("Sepal Width", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yLabel.center = new THREE.Vector2(0.2, 0.5);
+    yLabel.position.set(-0.1, 0.5, 2.1);
+    scene.add(yLabel);
+
+    yValueLower = makeTextSprite("2", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueLower.center = new THREE.Vector2(0, 0.5);
+    yValueLower.position.set(-0.1, 0.01, 2.1);
+    scene.add(yValueLower);
+
+    yValueUpper = makeTextSprite("4.4", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueUpper.center = new THREE.Vector2(0, 0.5);
+    yValueUpper.position.set(-0.1, 1.4, 2.1);
+    scene.add(yValueUpper);
 
   }
 
@@ -612,51 +613,51 @@ class Visualization {
 
 
     // Draw labels on the axes 
-    xLabel = makeTextSprite("Lattitude", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    xLabel.center = new THREE.Vector2(0.2, 0.5); 
-    xLabel.position.set(1, 0, -0.2); 
+    xLabel = makeTextSprite("Lattitude", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xLabel.center = new THREE.Vector2(0.2, 0.5);
+    xLabel.position.set(1, 0, -0.2);
     scene.add(xLabel);
 
-    xValueUpper = makeTextSprite("0", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    xValueUpper.center = new THREE.Vector2(0, 0.5); 
-    xValueUpper.position.set(0, -0.1, -0.15); 
+    xValueUpper = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueUpper.center = new THREE.Vector2(0, 0.5);
+    xValueUpper.position.set(0, -0.1, -0.15);
     scene.add(xValueUpper);
 
-    xValueLower = makeTextSprite("100", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    xValueLower.center = new THREE.Vector2(0, 0.5); 
-    xValueLower.position.set(2, -0.1, -0.15); 
+    xValueLower = makeTextSprite("100", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueLower.center = new THREE.Vector2(0, 0.5);
+    xValueLower.position.set(2, -0.1, -0.15);
     scene.add(xValueLower);
 
 
-    zLabel = makeTextSprite("Longitude", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    zLabel.center = new THREE.Vector2(0.2, 0.5); 
-    zLabel.position.set(-0.2, 0, 1); 
+    zLabel = makeTextSprite("Longitude", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zLabel.center = new THREE.Vector2(0.2, 0.5);
+    zLabel.position.set(-0.2, 0, 1);
     scene.add(zLabel);
 
-    zValueLower = makeTextSprite("0", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    zValueLower.center = new THREE.Vector2(0.1, 0.5); 
-    zValueLower.position.set(-0.2, -0.1, -0); 
+    zValueLower = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueLower.center = new THREE.Vector2(0.1, 0.5);
+    zValueLower.position.set(-0.2, -0.1, -0);
     scene.add(zValueLower);
 
-    zValueUpper = makeTextSprite("100", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    zValueUpper.center = new THREE.Vector2(0.1, 0.5); 
-    zValueUpper.position.set(-0.2, -0.1, 2); 
+    zValueUpper = makeTextSprite("100", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueUpper.center = new THREE.Vector2(0.1, 0.5);
+    zValueUpper.position.set(-0.2, -0.1, 2);
     scene.add(zValueUpper);
 
 
-    yLabel = makeTextSprite("Elevation", { fontsize: 32, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    yLabel.center = new THREE.Vector2(0.2, 0.5); 
-    yLabel.position.set(-0.2, 0.5, -0.2); 
+    yLabel = makeTextSprite("Elevation", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yLabel.center = new THREE.Vector2(0.2, 0.5);
+    yLabel.position.set(-0.2, 0.5, -0.2);
     scene.add(yLabel);
 
-    yValueLower = makeTextSprite("0", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    yValueLower.center = new THREE.Vector2(0, 0.5); 
-    yValueLower.position.set(-0.2, -0.1, -0.2); 
+    yValueLower = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueLower.center = new THREE.Vector2(0, 0.5);
+    yValueLower.position.set(-0.2, -0.1, -0.2);
     scene.add(yValueLower);
 
-    yValueUpper = makeTextSprite("300", { fontsize: 16, textColor: {r:255, g:255, b:255, a:0}, borderColor : { r:255, g:0, b:255, a:1.0 }}); 
-    yValueUpper.center = new THREE.Vector2(0, 0.5); 
-    yValueUpper.position.set(-0.2, 1.3, -0.2); 
+    yValueUpper = makeTextSprite("300", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueUpper.center = new THREE.Vector2(0, 0.5);
+    yValueUpper.position.set(-0.2, 1.3, -0.2);
     scene.add(yValueUpper);
   }
 
@@ -692,9 +693,15 @@ class Visualization {
   handleLivePreview(controller) {
 
     if (controller.userData.isSelecting) {
-      dataPoints.children.forEach(element => {
-        this.recolorVerticesOnPoint(element);
-      });
+
+      // dataPoints.children.forEach(element => {
+      //   this.recolorVerticesOnPoint(element);
+      // });
+
+
+      this.emphasiseLeastSeenObjects(5);
+      this.deemphasiseMostSeenObjects(5);
+
     }
 
   }
@@ -705,11 +712,23 @@ class Visualization {
 
 
 
+    // if (controller.userData.isGrabbing) {
+
+    //   this.emphasiseLeastSeenObjects(10);
+    //   this.deemphasiseMostSeenObjects(10);
+
+    // }
     if (controller.userData.isSelecting) {
 
-      this.emphasiseLeastSeenObjects(10);
-      this.deemphasiseMostSeenObjects(10);
+      // experimentPaused = true;
+
+      dataPoints.children.forEach(element => {
+        this.recolorVerticesOnPoint(element);
+      });
+
     }
+
+    // experimentPaused = false;
 
   }
 
@@ -718,19 +737,20 @@ class Visualization {
   onSelectStart() {
 
     this.userData.isSelecting = true;
+    experimentPaused = true; 
 
   }
 
   onSelectEnd() {
 
     this.userData.isSelecting = false;
-
+    experimentPaused = false; 
   }
 
 
 
   makeGUI(visualization) {
-    gui = new GUI();
+    gui = new GUI({ container: document.getElementById('gui') });
     gui.add(params, 'data', ['Scatterplot', 'Terrainmap', 'Barchart']).onFinishChange(() => this.handleNewVisualization());
     const areaPick = gui.add(params, 'areaPickSize', 11, 501, 10);
     areaPick.name("Size of gaze area (px Ø)")
@@ -782,7 +802,7 @@ class Visualization {
     // group.add(mesh);
 
     stats = new Stats();
-    vizContainer.appendChild(stats.dom);
+    // vizContainer.appendChild(stats.dom);
     stats.dom.style.width = '80px';
     stats.dom.style.height = '48px';
 
@@ -815,11 +835,11 @@ class Visualization {
     // draw a single frame
     // renderer.setViewport(0, 0, renderer.domElement?.offsetWidth, renderer.domElement?.offsetHeight);
 
-    this.handleLivePreview(controller2); // controller2 (right hand) does not seem to work...
-    this.handleShowExtremes(controller1);
+    this.handleLivePreview(controller1); // controller2 (right hand) does not seem to work...
+    this.handleShowExtremes(controller2);
 
     renderer.render(scene, camera);
-    stats.update();
+    // stats.update();
     // renderer.autoClear = false;
     // // viewHelper.render(renderer);
     // renderer.autoClear = true;
@@ -834,10 +854,9 @@ class Visualization {
       screenBuffer = this.checkForOcclusion();
       this.checkFrustum();
 
-      stats.update();
 
       // We only use attention aware strategies if the experiment is running and we are not currently live-showing the cumulative attention 
-      if (experimentStarted && !liveUpdate) {
+      if (experimentStarted && !liveUpdate && !experimentPaused) {
         // console.log(tempObjectAttentionStore);
         for (const element of dataPoints.children) {
 
@@ -1574,8 +1593,7 @@ class Visualization {
 
 
   emphasiseLeastSeenObjects(numberOfObjects) {
-    let attentionStore = objectAttentionStore;
-    attentionStore.sort();
+    let attentionStore = objectAttentionStore.toSorted();
     let objectsToBeEmphasised = attentionStore.slice(numberOfObjects - 1);
 
     dataPoints.children.forEach(element => {
@@ -1602,8 +1620,7 @@ class Visualization {
 
 
   deemphasiseMostSeenObjects(numberOfObjects) {
-    let attentionStore = objectAttentionStore;
-    attentionStore.sort();
+    let attentionStore = objectAttentionStore.toSorted();
     attentionStore.reverse();
     let objectsToBeDeemphasised = attentionStore.slice(numberOfObjects - 1);
     dataPoints.children.forEach(element => {
@@ -1754,15 +1771,21 @@ class Visualization {
     // this.resetAttentionToAllPoints();
     console.log("Data collection started!");
     experimentStarted = true;
+
     attentionID = setInterval(() => {
-      let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
-      // let subBuffer = this.isHoveringAreaBufferStandalone(); 
-      let circleBuffer = this.circleFromSquareBuffer(subBuffer);
-      this.addAttentionToFaces(circleBuffer);
-      this.increaseAttentionToPoint(circleBuffer);
+      if (!experimentPaused) {
+        let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
+        // let subBuffer = this.isHoveringAreaBufferStandalone(); 
+        let circleBuffer = this.circleFromSquareBuffer(subBuffer);
+        this.addAttentionToFaces(circleBuffer);
+        this.increaseAttentionToPoint(circleBuffer);
+      }
     }, params.attentionIntervalMS);
+
     decayID = setInterval(() => {
-      this.decayTempAttention();
+      if (!experimentPaused) {
+        this.decayTempAttention();
+      }
     }, params.decayRate);
   }
 
@@ -1827,13 +1850,13 @@ class Visualization {
 
 
   toggleDeemphasis() {
-    params.allowDeemphasis = !params.allowDeemphasis;
+    // params.allowDeemphasis = !params.allowDeemphasis;
     console.log("Deemphasizing is", params.allowDeemphasis);
   }
 
 
   toggleEmphasis() {
-    params.allowEmphasis = !params.allowEmphasis;
+    // params.allowEmphasis = !params.allowEmphasis;
     console.log("Emphasizing is", params.allowEmphasis);
   }
 }

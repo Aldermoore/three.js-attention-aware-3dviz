@@ -85,3 +85,7 @@ h1 {
   color: greenyellow;
   z-index: 1;
 }
+
+.gui { 
+  position: absolute; top: 2px; left: 2px;
+}

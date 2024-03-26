@@ -22,7 +22,7 @@ export default defineConfig({
         conditionD: resolve(__dirname, 'conditionD.html'),
         conditionE: resolve(__dirname, 'conditionE.html'),
         conditionF: resolve(__dirname, 'conditionF.html'),
-        conditionG: resolve(__dirname, 'conditionH.html'),
+        conditionG: resolve(__dirname, 'conditionG.html'),
         conditionH: resolve(__dirname, 'conditionH.html'),
       },
     },

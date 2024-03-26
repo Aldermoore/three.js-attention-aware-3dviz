@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Attention Aware 3D Visualization</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+
+  <link rel="icon" href="📊" type="image/x-icon">
+
+  <link href="./styles/main.css" rel="stylesheet" type="text/css">
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module" src="./src/main.js"></script>
+</head>
+
+<body>
+  <script type="x-shader/x-vertex" id="vertexshader">
+
+    varying vec2 vUv;
+
+    void main() {
+
+      vUv = uv;
+
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+    }
+
+  </script>
+
+  <script type="x-shader/x-fragment" id="fragmentshader">
+
+    uniform sampler2D baseTexture;
+    uniform sampler2D bloomTexture;
+
+    varying vec2 vUv;
+
+    void main() {
+
+      gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+
+    }
+
+  </script>
+
+
+  <h1>Attention Aware 3D Visualization</h1>
+  <div id="scene-container">
+    <!-- Our <canvas> will be inserted here -->
+      <div class="gui" id="gui"></div>
+  </div>
+ 
+</body>
+
+</html>

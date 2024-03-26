@@ -82,8 +82,8 @@ const colorScale = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3
 var attentionList;
 
 
-let experimentStarted = false;
-let liveUpdate = false;
+// let experimentStarted = false;
+// let liveUpdate = false;
 let experimentPaused = false;
 
 
@@ -93,26 +93,18 @@ let controller;
 let gui;
 let controller1, controller2;
 let controllerGrip1, controllerGrip2;
-let previewing = false;
 
 
-// These are for showing that it works and should be removed as some point. 
-var yellowmessage;
-var tealmessage;
-var hovermessage;
-var frustummessage;
-
-var visibleObjectsDiv;
 
 
-const params = {
+let params = {
   data: 'Terrainmap',
   areaPickSize: 361, //should be an odd number!!
   Start: function () { viz.startExperiment() },
   Stop: function () { viz.stopExperiment() },
   Show_Results: function () { viz.showExperimentResults() },
   Reset: function () { viz.resetExperimentData() },
-  LiveUpdate: false,
+  liveUpdate: false,
   allowDeemphasis: false,
   allowEmphasis: false,
   resetColors: function () { viz.resetColorsOnAllPoints() },
@@ -120,7 +112,10 @@ const params = {
   emphasizeThreshold: 5,
   attentionIntervalMS: 100,
   recolorIntervalMS: 100,
-  decayRate: 1000
+  decayRate: 1000,
+  heightModifier: 0.5,
+  allowController: true, 
+  experimentStarted: true
 };
 
 var viz;
@@ -134,8 +129,9 @@ class Visualization {
   radiusSquared;
 
 
-  constructor(container) {
+  constructor(container, parameters) {
 
+    params = parameters;
     vizContainer = container;
     viz = this;
 
@@ -171,12 +167,6 @@ class Visualization {
       vertexColors: true
     });
 
-
-    // These are for showing that i works and should be removed as some point. 
-    yellowmessage = document.getElementById('yellowmessage');
-    tealmessage = document.getElementById('tealmessage');
-    hovermessage = document.getElementById('hovermessage');
-    frustummessage = document.getElementById('frustummessage');
 
 
     const controls = createControls(camera, renderer.domElement);
@@ -322,12 +312,15 @@ class Visualization {
         }
       }
       for (let k = 0; k < cylinders.length; k++) {
-        if (car.Cylinders == cylinders[k]) {
+        if (car.Cylinders == cylinders[k] && car.Origin == "US") {
           cylinder = k;
         }
       }
+
       finalData[model][cylinder] += 1;
     }
+
+    console.log(finalData);
 
 
     let id = 1;
@@ -338,7 +331,7 @@ class Visualization {
         let heightSegments = Math.ceil(height * 4);
 
         let markColor = new THREE.Color(colorScale[col]);
-        let position = new THREE.Vector3(col / 7, 0, row / 7)
+        let position = new THREE.Vector3(col / 7, 0 - params.heightModifier, row / 7)
         let geometry = new THREE.BoxGeometry(0.1, height, 0.1, 2, heightSegments, 2);
         let material = new THREE.MeshPhongMaterial({ color: "silver", wireframe: false, flatShading: true, userData: { oldColor: markColor }, vertexColors: true });
         material.userData.originalColor = markColor;
@@ -356,7 +349,7 @@ class Visualization {
 
         box.name = id;
         id++;
-        box.position.set(position.x, height / 2, position.z);
+        box.position.set(position.x, (height / 2) - params.heightModifier, position.z);
 
         let pickingBox = this.createBoxBuffer(geometry, box);
         let pickingMesh = new THREE.Mesh(pickingBox, pickingMaterial);
@@ -374,17 +367,17 @@ class Visualization {
 
     // Draw axes for the visualisation
     const geometryX = new THREE.BufferGeometry();
-    geometryX.setFromPoints([new THREE.Vector3(-0.1, 0, -0.1), new THREE.Vector3(0.68, 0, -0.1)]);
+    geometryX.setFromPoints([new THREE.Vector3(-0.1, 0 - params.heightModifier, -0.1), new THREE.Vector3(0.68, 0 - params.heightModifier, -0.1)]);
     xAxis = new THREE.Line(geometryX, new THREE.LineBasicMaterial());
     scene.add(xAxis);
 
     const geometryY = new THREE.BufferGeometry();
-    geometryY.setFromPoints([new THREE.Vector3(-0.1, 0, -0.1), new THREE.Vector3(-0.1, 1, -0.1)]);
+    geometryY.setFromPoints([new THREE.Vector3(-0.1, 0 - params.heightModifier, -0.1), new THREE.Vector3(-0.1, 1 - params.heightModifier, -0.1)]);
     yAxis = new THREE.Line(geometryY, new THREE.LineBasicMaterial());
     scene.add(yAxis);
 
     const geometryZ = new THREE.BufferGeometry();
-    geometryZ.setFromPoints([new THREE.Vector3(-0.1, 0, -0.1), new THREE.Vector3(-0.1, 0, 1.8)]);
+    geometryZ.setFromPoints([new THREE.Vector3(-0.1, 0 - params.heightModifier, -0.1), new THREE.Vector3(-0.1, 0 - params.heightModifier, 1.8)]);
     zAxis = new THREE.Line(geometryZ, new THREE.LineBasicMaterial());
     scene.add(zAxis);
 
@@ -392,49 +385,49 @@ class Visualization {
     // Draw labels on the axes 
     xLabel = makeTextSprite("Cylinders", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     xLabel.center = new THREE.Vector2(0.2, 0.5);
-    xLabel.position.set(0.35, 0, -0.2);
+    xLabel.position.set(0.35, 0 - params.heightModifier, -0.2);
     scene.add(xLabel);
 
     xValueUpper = makeTextSprite("3", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     xValueUpper.center = new THREE.Vector2(0, 0.5);
-    xValueUpper.position.set(0, -0.1, -0.15);
+    xValueUpper.position.set(0, -0.1 - params.heightModifier, -0.15);
     scene.add(xValueUpper);
 
     xValueLower = makeTextSprite("8", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     xValueLower.center = new THREE.Vector2(0, 0.5);
-    xValueLower.position.set(0.6, -0.1, -0.15);
+    xValueLower.position.set(0.6, -0.1 - params.heightModifier, -0.15);
     scene.add(xValueLower);
 
 
     zLabel = makeTextSprite("Model Year", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     zLabel.center = new THREE.Vector2(0.2, 0.5);
-    zLabel.position.set(-0.2, 0, 1);
+    zLabel.position.set(-0.2, 0 - params.heightModifier, 1);
     scene.add(zLabel);
 
     zValueLower = makeTextSprite("1970", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     zValueLower.center = new THREE.Vector2(0.1, 0.5);
-    zValueLower.position.set(-0.2, -0.1, -0);
+    zValueLower.position.set(-0.2, -0.1 - params.heightModifier, -0);
     scene.add(zValueLower);
 
     zValueUpper = makeTextSprite("1982", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     zValueUpper.center = new THREE.Vector2(0.1, 0.5);
-    zValueUpper.position.set(-0.2, -0.1, 1.75);
+    zValueUpper.position.set(-0.2, -0.1 - params.heightModifier, 1.75);
     scene.add(zValueUpper);
 
 
     yLabel = makeTextSprite("No. cars", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     yLabel.center = new THREE.Vector2(0.2, 0.5);
-    yLabel.position.set(-0.2, 0.5, -0.2);
+    yLabel.position.set(-0.2, 0.5 - params.heightModifier, -0.2);
     scene.add(yLabel);
 
     yValueLower = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     yValueLower.center = new THREE.Vector2(0, 0.5);
-    yValueLower.position.set(-0.2, -0.1, -0.2);
+    yValueLower.position.set(-0.2, -0.1 - params.heightModifier, -0.2);
     scene.add(yValueLower);
 
     yValueUpper = makeTextSprite("28", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     yValueUpper.center = new THREE.Vector2(0, 0.5);
-    yValueUpper.position.set(-0.2, 0.9, -0.2);
+    yValueUpper.position.set(-0.2, 0.9 - params.heightModifier, -0.2);
     scene.add(yValueUpper);
   }
 
@@ -513,7 +506,7 @@ class Visualization {
 
       // Map the data to a specific plot area 
       let xVal = this.map_range(element.sepalLength, xAttrMin, xAttrMax, 0, 2);
-      let yVal = this.map_range(element.sepalWidth, yAttrMin, yAttrMax, 0, 1.5);
+      let yVal = this.map_range(element.sepalWidth, yAttrMin, yAttrMax, 0, 1.5) - params.heightModifier;
       let zVal = this.map_range(element.petalWidth, zAttrMin, zAttrMax, 0, 2);
 
       // TODO: Nice way to bind data-dimensions to scene dimensions (X,Y,Z), and to mark-attributes (size, height/width/thickness, colour, orientation) depending on the type of mark. 
@@ -525,66 +518,66 @@ class Visualization {
 
     // Draw axes for the visualisation
     const geometryX = new THREE.BufferGeometry();
-    geometryX.setFromPoints([new THREE.Vector3(0, 0, 2), new THREE.Vector3(2, 0, 2)]);
+    geometryX.setFromPoints([new THREE.Vector3(0, 0 - params.heightModifier, 2), new THREE.Vector3(2, 0 - params.heightModifier, 2)]);
     xAxis = new THREE.Line(geometryX, new THREE.LineBasicMaterial());
     scene.add(xAxis);
 
     const geometryY = new THREE.BufferGeometry();
-    geometryY.setFromPoints([new THREE.Vector3(0, 0, 2), new THREE.Vector3(0, 1.5, 2)]);
+    geometryY.setFromPoints([new THREE.Vector3(0, 0 - params.heightModifier, 2), new THREE.Vector3(0, 1.5 - params.heightModifier, 2)]);
     yAxis = new THREE.Line(geometryY, new THREE.LineBasicMaterial());
     scene.add(yAxis);
 
     const geometryZ = new THREE.BufferGeometry();
-    geometryZ.setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 2)]);
+    geometryZ.setFromPoints([new THREE.Vector3(0, 0 - params.heightModifier, 0), new THREE.Vector3(0, 0 - params.heightModifier, 2)]);
     zAxis = new THREE.Line(geometryZ, new THREE.LineBasicMaterial());
     scene.add(zAxis);
 
     // Draw labels on the axes 
     xLabel = makeTextSprite("Sepal Length", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     xLabel.center = new THREE.Vector2(0.2, 0.5);
-    xLabel.position.set(1, -0.1, 2.1);
+    xLabel.position.set(1, -0.1 - params.heightModifier, 2.1);
     scene.add(xLabel);
 
     xValueUpper = makeTextSprite("4.3", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     xValueUpper.center = new THREE.Vector2(0, 0.5);
-    xValueUpper.position.set(0, -0.1, 2.1);
+    xValueUpper.position.set(0, -0.1 - params.heightModifier, 2.1);
     scene.add(xValueUpper);
 
     xValueLower = makeTextSprite("7.9", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     xValueLower.center = new THREE.Vector2(0, 0.5);
-    xValueLower.position.set(2, -0.1, 2.1);
+    xValueLower.position.set(2, -0.1 - params.heightModifier, 2.1);
     scene.add(xValueLower);
 
 
     zLabel = makeTextSprite("Petal Width", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     zLabel.center = new THREE.Vector2(0.2, 0.5);
-    zLabel.position.set(-0.1, -0.1, 1);
+    zLabel.position.set(-0.1, -0.1 - params.heightModifier, 1);
     scene.add(zLabel);
 
     zValueLower = makeTextSprite("0.1", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     zValueLower.center = new THREE.Vector2(0, 0.5);
-    zValueLower.position.set(-0.2, -0.1, -0);
+    zValueLower.position.set(-0.2, -0.1 - params.heightModifier, -0);
     scene.add(zValueLower);
 
     zValueUpper = makeTextSprite("2.5", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     zValueUpper.center = new THREE.Vector2(0, 0.5);
-    zValueUpper.position.set(-0.2, -0.1, 2);
+    zValueUpper.position.set(-0.2, -0.1 - params.heightModifier, 2);
     scene.add(zValueUpper);
 
 
     yLabel = makeTextSprite("Sepal Width", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     yLabel.center = new THREE.Vector2(0.2, 0.5);
-    yLabel.position.set(-0.1, 0.5, 2.1);
+    yLabel.position.set(-0.1, 0.5 - params.heightModifier, 2.1);
     scene.add(yLabel);
 
     yValueLower = makeTextSprite("2", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     yValueLower.center = new THREE.Vector2(0, 0.5);
-    yValueLower.position.set(-0.1, 0.01, 2.1);
+    yValueLower.position.set(-0.1, 0.01 - params.heightModifier, 2.1);
     scene.add(yValueLower);
 
     yValueUpper = makeTextSprite("4.4", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     yValueUpper.center = new THREE.Vector2(0, 0.5);
-    yValueUpper.position.set(-0.1, 1.4, 2.1);
+    yValueUpper.position.set(-0.1, 1.4 - params.heightModifier, 2.1);
     scene.add(yValueUpper);
 
   }
@@ -592,21 +585,21 @@ class Visualization {
 
 
   createTerrainMapVisualization() {
-    this.createTerrainMap(1, colorScale[3], new THREE.Vector3(1, 0, 1), 2);
+    this.createTerrainMap(1, colorScale[3], new THREE.Vector3(1, 0 - params.heightModifier, 1), 1);
 
     // Draw axes for the visualisation
     const geometryX = new THREE.BufferGeometry();
-    geometryX.setFromPoints([new THREE.Vector3(-0.1, 0.1, -0.1), new THREE.Vector3(2.1, 0.1, -0.1)]);
+    geometryX.setFromPoints([new THREE.Vector3(0.45, 0 - params.heightModifier, 0.45), new THREE.Vector3(1.55, 0 - params.heightModifier, 0.45)]);
     xAxis = new THREE.Line(geometryX, new THREE.LineBasicMaterial());
     scene.add(xAxis);
 
     const geometryY = new THREE.BufferGeometry();
-    geometryY.setFromPoints([new THREE.Vector3(-0.1, 0.1, -0.1), new THREE.Vector3(-0.1, 1.5, -0.1)]);
+    geometryY.setFromPoints([new THREE.Vector3(0.45, 0 - params.heightModifier, 0.45), new THREE.Vector3(0.45, 0.35 - params.heightModifier, 0.45)]);
     yAxis = new THREE.Line(geometryY, new THREE.LineBasicMaterial());
     scene.add(yAxis);
 
     const geometryZ = new THREE.BufferGeometry();
-    geometryZ.setFromPoints([new THREE.Vector3(-0.1, 0.1, -0.1), new THREE.Vector3(-0.1, 0.1, 2.1)]);
+    geometryZ.setFromPoints([new THREE.Vector3(0.45, 0 - params.heightModifier, 0.45), new THREE.Vector3(0.45, 0 - params.heightModifier, 1.55)]);
     zAxis = new THREE.Line(geometryZ, new THREE.LineBasicMaterial());
     scene.add(zAxis);
 
@@ -615,49 +608,49 @@ class Visualization {
     // Draw labels on the axes 
     xLabel = makeTextSprite("Lattitude", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     xLabel.center = new THREE.Vector2(0.2, 0.5);
-    xLabel.position.set(1, 0, -0.2);
+    xLabel.position.set(1, 0 - params.heightModifier, 0.4);
     scene.add(xLabel);
 
     xValueUpper = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     xValueUpper.center = new THREE.Vector2(0, 0.5);
-    xValueUpper.position.set(0, -0.1, -0.15);
+    xValueUpper.position.set(0.5, -0.1 - params.heightModifier, 0.4);
     scene.add(xValueUpper);
 
     xValueLower = makeTextSprite("100", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     xValueLower.center = new THREE.Vector2(0, 0.5);
-    xValueLower.position.set(2, -0.1, -0.15);
+    xValueLower.position.set(1.5, -0.1 - params.heightModifier, 0.4);
     scene.add(xValueLower);
 
 
     zLabel = makeTextSprite("Longitude", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     zLabel.center = new THREE.Vector2(0.2, 0.5);
-    zLabel.position.set(-0.2, 0, 1);
+    zLabel.position.set(0.4, 0 - params.heightModifier, 1);
     scene.add(zLabel);
 
     zValueLower = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     zValueLower.center = new THREE.Vector2(0.1, 0.5);
-    zValueLower.position.set(-0.2, -0.1, -0);
+    zValueLower.position.set(0.4, -0.1 - params.heightModifier, 0.5);
     scene.add(zValueLower);
 
     zValueUpper = makeTextSprite("100", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     zValueUpper.center = new THREE.Vector2(0.1, 0.5);
-    zValueUpper.position.set(-0.2, -0.1, 2);
+    zValueUpper.position.set(0.4, -0.1 - params.heightModifier, 1.5);
     scene.add(zValueUpper);
 
 
     yLabel = makeTextSprite("Elevation", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     yLabel.center = new THREE.Vector2(0.2, 0.5);
-    yLabel.position.set(-0.2, 0.5, -0.2);
+    yLabel.position.set(0.4, 0.125 - params.heightModifier, 0.4);
     scene.add(yLabel);
 
     yValueLower = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     yValueLower.center = new THREE.Vector2(0, 0.5);
-    yValueLower.position.set(-0.2, -0.1, -0.2);
+    yValueLower.position.set(0.4, -0.1 - params.heightModifier, 0.4);
     scene.add(yValueLower);
 
     yValueUpper = makeTextSprite("300", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
     yValueUpper.center = new THREE.Vector2(0, 0.5);
-    yValueUpper.position.set(-0.2, 1.3, -0.2);
+    yValueUpper.position.set(0.4, 0.25 - params.heightModifier, 0.4);
     scene.add(yValueUpper);
   }
 
@@ -692,15 +685,14 @@ class Visualization {
 
   handleLivePreview(controller) {
 
-    if (controller.userData.isSelecting) {
+    if (params.allowController) {
 
-      // dataPoints.children.forEach(element => {
-      //   this.recolorVerticesOnPoint(element);
-      // });
+      if (controller.userData.isSelecting) {
 
-
-      this.emphasiseLeastSeenObjects(5);
-      this.deemphasiseMostSeenObjects(5);
+        dataPoints.children.forEach(element => {
+          this.recolorVerticesOnPoint(element);
+        });
+      }
 
     }
 
@@ -737,14 +729,14 @@ class Visualization {
   onSelectStart() {
 
     this.userData.isSelecting = true;
-    experimentPaused = true; 
+    experimentPaused = true;
 
   }
 
   onSelectEnd() {
 
     this.userData.isSelecting = false;
-    experimentPaused = false; 
+    experimentPaused = false;
   }
 
 
@@ -765,7 +757,7 @@ class Visualization {
     expSettings.add(params, 'Stop').name("Stop data collection");
     expSettings.add(params, 'Show_Results').name("Show cumulative attention");
     expSettings.add(params, 'Reset').name("Reset/discard collected data");
-    expSettings.add(params, "LiveUpdate").name("Show realtime cumulative attention").onFinishChange(value => {
+    expSettings.add(params, "liveUpdate").name("Show realtime cumulative attention").onFinishChange(value => {
       this.toggleLiveUpdate(value);
     });
     expSettings.add(params, "allowDeemphasis").name("Allow deemphasis of points").onChange(value => {
@@ -822,7 +814,7 @@ class Visualization {
     this.render();
     this.animate();
     //this.toggleLiveUpdate();
-    // this.startExperiment();
+    this.startExperiment(); // autostart the experiment, TODO should this only get called when the user enters immersive mode?? - To test 
   }
 
 
@@ -856,7 +848,7 @@ class Visualization {
 
 
       // We only use attention aware strategies if the experiment is running and we are not currently live-showing the cumulative attention 
-      if (experimentStarted && !liveUpdate && !experimentPaused) {
+      if (params.experimentStarted && !params.liveUpdate && !params.experimentPaused) {
         // console.log(tempObjectAttentionStore);
         for (const element of dataPoints.children) {
 
@@ -1001,7 +993,7 @@ class Visualization {
     let col = 0;
     for (let i = 1; i < plane.geometry.attributes.position.array.length; i += 3) {
       let val = (elevation[col][row]);
-      val = this.map_range(val, 0, 300, 0, 1);
+      val = this.map_range(val, 0, 300, 0, 0.25);
       plane.geometry.attributes.position.array[i] = val;
       col++;
       if (col > 24) {
@@ -1051,7 +1043,7 @@ class Visualization {
     let col = 0;
     for (let i = 1; i < geometry.attributes.position.array.length; i += 3) {
       let val = (elevation[col][row]);
-      val = this.map_range(val, 0, 300, 0, 1);
+      val = this.map_range(val, 0, 300, 0, 0.25);
       geometry.attributes.position.array[i] = val;
       col++;
       if (col > 24) {
@@ -1770,7 +1762,7 @@ class Visualization {
   startExperiment() {
     // this.resetAttentionToAllPoints();
     console.log("Data collection started!");
-    experimentStarted = true;
+    params.experimentStarted = true;
 
     attentionID = setInterval(() => {
       if (!experimentPaused) {
@@ -1792,7 +1784,7 @@ class Visualization {
 
   stopExperiment() {
     console.log("Data collection stopped!");
-    experimentStarted = false;
+    params.experimentStarted = false;
     clearInterval(attentionID);
     attentionID = null;
     clearInterval(decayID);
@@ -1822,13 +1814,13 @@ class Visualization {
 
 
   toggleLiveUpdate() {
-    if (liveUpdate) {
-      liveUpdate = false;
+    if (!params.liveUpdate) {
+      // liveUpdate = false;
       console.log("Live preview of cumulative attention turned off");
       clearInterval(reColorID);
       reColorID = null;
     } else {
-      liveUpdate = true;
+      // liveUpdate = true;
       console.log("Live preview of cumulative attention turned on");
       reColorID = setInterval(() => {
         dataPoints.children.forEach(element => {

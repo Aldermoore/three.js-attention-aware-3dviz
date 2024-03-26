@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Attention Aware 3D Visualization</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+
+  <link rel="icon" href="📊" type="image/x-icon">
+
+  <link href="./styles/main.css" rel="stylesheet" type="text/css">
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module" src="./src/conditionC.js"></script>
+</head>
+
+<body>
+
+  <h1>Attention Aware 3D Visualization</h1>
+  <div id="scene-container">
+    <!-- Our <canvas> will be inserted here -->
+      <div class="gui" id="gui"></div>
+  </div>
+ 
+</body>
+
+</html>

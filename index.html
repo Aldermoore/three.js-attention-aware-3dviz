@@ -9,7 +9,7 @@
 
   <link rel="icon" href="📊" type="image/x-icon">
 
-  <link href="./styles/main.css" rel="stylesheet" type="text/css">
+  <link href="./styles/frontpage.css" rel="stylesheet" type="text/css">
 
   <script type="importmap">
     {
@@ -20,50 +20,92 @@
     }
   </script>
 
-  <script type="module" src="./src/main.js"></script>
+
 </head>
 
 <body>
-  <script type="x-shader/x-vertex" id="vertexshader">
-
-    varying vec2 vUv;
-
-    void main() {
-
-      vUv = uv;
-
-      gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-
-    }
-
-  </script>
-
-  <script type="x-shader/x-fragment" id="fragmentshader">
-
-    uniform sampler2D baseTexture;
-    uniform sampler2D bloomTexture;
-
-    varying vec2 vUv;
-
-    void main() {
-
-      gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
-
-    }
-
-  </script>
 
 
   <h1>Attention Aware 3D Visualization</h1>
-  <div class="yellowmessage" id="yellowmessage"></div>
-  <div class="tealmessage" id="tealmessage"></div>
-  <div class="frustummessage" id="frustummessage"></div>
-  <div class="hovermessage" id="hovermessage"></div>
-  <div id="scene-container">
-    <!-- Our <canvas> will be inserted here -->
-      <div class="gui" id="gui"></div>
+  <div id="grid-layout">
+    <p class="typeA">Scatterplot</p>
+    <p class="typeB">Barchart</p>
+    <p class="typeC">Terrainmap</p>
+    <p class="triggerA">Explicit</p>
+    <p class="triggerB">Always-on</p>
+    <p class="triggerC">Implicit</p>
+    <div id="button-container">
+
+      <button id="conditionA" class="styled">Condition A: Scatterplot with Explicit heatmap</button>
+      <button id="conditionB" class="styled">Condition B: Barchart with Explicit heatmap</button>
+      <button id="conditionC" class="styled">Condition C: Terrainmap with Always-on heatmap</button>
+      <button id="conditionD" class="styled">Condition D: Scatterplot with Always-on heatmap</button>
+      <button id="conditionE" class="styled">Condition E: Barchart with Always-on heatmap</button>
+      <button id="conditionF" class="styled">Condition F: Terrainmap with Implicit (de)saturation</button>
+      <button id="conditionG" class="styled">Condition G: Scatterplot with Implicit (de)saturation</button>
+      <button id="conditionH" class="styled">Condition H: Barchart with Implicit (de)saturation</button>
+
+    </div>
   </div>
- 
 </body>
+
+<script>
+  const conditionABtn = document.getElementById("conditionA");
+  const conditionBBtn = document.getElementById("conditionB");
+  const conditionCBtn = document.getElementById("conditionC");
+  const conditionDBtn = document.getElementById("conditionD");
+  const conditionEBtn = document.getElementById("conditionE");
+  const conditionFBtn = document.getElementById("conditionF");
+  const conditionGBtn = document.getElementById("conditionG");
+  const conditionHBtn = document.getElementById("conditionH");
+
+  conditionABtn.addEventListener("click", (event) => {
+    alert("condition A is starting. Press OK to begin the experiment");
+    window.location.href = '/conditionA.html';
+
+  });
+
+  conditionBBtn.addEventListener("click", (event) => {
+    alert("condition B started");
+    window.location.href = '/conditionB.html';
+
+  });
+
+  conditionCBtn.addEventListener("click", (event) => {
+    alert("condition C started");
+    window.location.href = '/conditionC.html';
+
+  });
+
+  conditionDBtn.addEventListener("click", (event) => {
+    alert("condition D started");
+    window.location.href = '/conditionD.html';
+
+  });
+
+  conditionEBtn.addEventListener("click", (event) => {
+    alert("condition E started");
+    window.location.href = '/conditionE.html';
+
+  });
+
+  conditionFBtn.addEventListener("click", (event) => {
+    alert("condition F started");
+    window.location.href = '/conditionF.html';
+
+  });
+
+  conditionGBtn.addEventListener("click", (event) => {
+    alert("condition G started");
+    window.location.href = '/conditionG.html';
+
+  });
+
+  conditionHBtn.addEventListener("click", (event) => {
+    alert("condition H started");
+    window.location.href = '/conditionH.html';
+
+  });
+</script>
 
 </html>

@@ -37,6 +37,7 @@ function main() {
 
   // start the animation loop
   viz.start();
+  viz.toggleLiveUpdate(); 
   
 }
 main();

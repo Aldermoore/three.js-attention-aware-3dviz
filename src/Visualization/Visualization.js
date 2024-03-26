@@ -312,7 +312,7 @@ class Visualization {
         }
       }
       for (let k = 0; k < cylinders.length; k++) {
-        if (car.Cylinders == cylinders[k] && car.Origin == "US") {
+        if (car.Cylinders == cylinders[k]  && car.Origin != "Asia") {
           cylinder = k;
         }
       }
@@ -470,7 +470,7 @@ class Visualization {
       };
     }
     let speciesList = Object.values(tempResult);
-    // console.log(speciesList.length);
+    console.log(speciesList);
 
     let xAttrMax = Math.max.apply(null, iris.map(function (o) { return o.sepalLength }));
     let xAttrMin = Math.min.apply(null, iris.map(function (o) { return o.sepalLength }));
@@ -779,7 +779,7 @@ class Visualization {
 
     attentionSettings.close();
 
-    gui.open();
+    gui.close();
     gui.domElement.style.visibility = 'visible';
 
     // group = new InteractiveGroup(renderer, camera);

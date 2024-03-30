@@ -1,3 +1,6 @@
 node_modules
 node_modules/*
 package-lock.json
+
+# MacOS specific files
+.DS_Store

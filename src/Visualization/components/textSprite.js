@@ -3,7 +3,7 @@ import { SpriteMaterial, Sprite, Texture } from 'three';
 function makeTextSprite( message, parameters ) {
     if ( parameters === undefined ) parameters = {};
     
-    var fontface = parameters.hasOwnProperty("fontface") ? parameters["fontface"] : "Courier New";
+    var fontface = parameters.hasOwnProperty("fontface") ? parameters["fontface"] : "Libertine";
     var fontsize = parameters.hasOwnProperty("fontsize") ? parameters["fontsize"] : 18;
     var borderThickness = parameters.hasOwnProperty("borderThickness") ? parameters["borderThickness"] : 4;
     var borderColor = parameters.hasOwnProperty("borderColor") ?parameters["borderColor"] : { r:0, g:0, b:0, a:1.0 };

@@ -3,35 +3,39 @@ import { createCamera } from './components/camera.js';
 import { createLights } from './components/lights.js';
 import { createScene } from './components/scene.js';
 import { createOrthograpichCamera } from './components/cameraOrthographic.js';
+import { makeTextSprite } from './components/textSprite.js';
 
 import { createRenderer } from './systems/renderer.js';
 import { Resizer } from './systems/Resizer.js';
 import { Loop } from './systems/Loop.js';
 import { createControls } from './systems/controls.js'
-import iris from './data/iris.json' assert {type: 'json'}; //Our data
-import { ViewHelper } from './components/viewHelper.js';
+
+// Datasets
+import iris from './data/iris.json' assert {type: 'json'};
+import elevation from './data/mt_bruno_elevation.json' assert {type: 'json'};
+import cars from './data/cars.json' assert {type: 'json'};
+
+// import { ViewHelper } from './components/viewHelper.js';
+
 // THREEjs libraries 
 import TWEEN from '@tweenjs/tween.js'
 
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
 
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 
-
+let vizContainer;
 let camera;
 let renderer;
 let scene;
 let loop;
-let viewHelper;
+// let viewHelper;
 let stats;
+
+let xAxis, yAxis, zAxis;
+let xLabel, yLabel, zLabel;
+let xValueUpper, xValueLower, yValueUpper, yValueLower, zValueUpper, zValueLower;
 
 let dataPoints;
 let pickingPoints;
@@ -45,19 +49,20 @@ var mousePick = new THREE.Vector2();
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 
-const width = window.innerWidth;
-const height = window.innerHeight;
+var width = window.innerWidth;
+var height = window.innerHeight;
+
 
 var screenBuffer;
 let facesMaxAttention = 0;
 let facesAttentionStore = [];
-let bjectMaxAttention = 0;
+let objectMaxAttention = 0;
 let objectAttentionStore = [];
 
-let tempObjectAttentionStore = []; 
+let tempObjectAttentionStore = [];
 let triggeredStore = [];
-const deemphasizeThreshold = 90; 
-const emphasizeThreshold = 5; 
+const deemphasizeThreshold = 90;
+const emphasizeThreshold = 5;
 
 const attentionIntervalMS = 100;
 const recolorIntervalMS = 100;
@@ -74,38 +79,61 @@ const colorScale = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3
 var attentionList;
 
 
-let experimentStarted = false;
-var liveUpdate = false;
+// let experimentStarted = false;
+// let liveUpdate = false;
+let experimentPaused = false;
+
+let gui;
 
 
 
 
-// These are for showing that it works and should be removed as some point. 
-var yellowmessage;
-var tealmessage;
-var hovermessage;
-var frustummessage;
+let params = {
+  data: 'Terrainmap',
+  areaPickSize: 101, //should be an odd number!!
+  Start: function () { viz.startExperiment() },
+  Stop: function () { viz.stopExperiment() },
+  Show_Results: function () { viz.showExperimentResults() },
+  Reset: function () { viz.resetExperimentData() },
+  liveUpdate: false,
+  allowDeemphasis: false,
+  allowEmphasis: false,
+  resetColors: function () { viz.resetColorsOnAllPoints() },
+  deemphasizeThreshold: 90,
+  emphasizeThreshold: 5,
+  attentionIntervalMS: 100,
+  recolorIntervalMS: 100,
+  decayRate: 1000,
+  heightModifier: 0.5,
+  allowController: true,
+  experimentStarted: true
+};
 
+var viz;
 
 
 class Visualization {
 
-  params = {
-    x: 0,
-    y: 0,
-    z: 0,
-    areaPickSize: 501, //should be an odd number!!
-    allowDeemphasis: true,
-    allowEmphasis: true
-  };
+  centerRow;
+  centerColumn;
+  radius;
+  radiusSquared;
 
-  centerRow = Math.floor((this.params.areaPickSize) / 2);
-  centerColumn = Math.floor((this.params.areaPickSize) / 2);
-  radius = this.params.areaPickSize / 2;
-  radiusSquared = this.radius * this.radius;
 
-  constructor(container) {
-    camera = createCamera();
+  constructor(container, parameters) {
+
+    params = parameters;
+    vizContainer = container;
+    viz = this;
+
+
+
+    this.centerRow = Math.floor((params.areaPickSize) / 2);
+    this.centerColumn = Math.floor((params.areaPickSize) / 2);
+    this.radius = params.areaPickSize / 2;
+    this.radiusSquared = this.radius * this.radius;
+
+    camera = createCamera(window);
     // camera = createOrthograpichCamera(width, height);
     renderer = createRenderer();
     scene = createScene();
@@ -124,23 +152,17 @@ class Visualization {
 
     pickingScene = new THREE.Scene();
     pickingTextureHover = new THREE.WebGLRenderTarget(1, 1);
-    pickingTextureAreaHover = new THREE.WebGLRenderTarget(this.params.areaPickSize, this.params.areaPickSize);
+    pickingTextureAreaHover = new THREE.WebGLRenderTarget(params.areaPickSize, params.areaPickSize);
     pickingTextureOcclusion = new THREE.WebGLRenderTarget(width, height);
     pickingMaterial = new THREE.MeshBasicMaterial({
       vertexColors: true
     });
 
 
-    // These are for showing that i works and should be removed as some point. 
-    yellowmessage = document.getElementById('yellowmessage');
-    tealmessage = document.getElementById('tealmessage');
-    hovermessage = document.getElementById('hovermessage');
-    frustummessage = document.getElementById('frustummessage');
-
 
     const controls = createControls(camera, renderer.domElement);
     const { ambientLight, mainLight } = createLights();
-    viewHelper = new ViewHelper(camera, container, controls);
+    // viewHelper = new ViewHelper(camera, container, controls);
 
 
     scene.add(ambientLight, mainLight);
@@ -150,10 +172,6 @@ class Visualization {
     resizer.onResize = () => {
       this.render(); // Technically not needed if we just constantly rerender each frame. 
     }
-    stats = new Stats();
-    container.appendChild(stats.dom);
-
-
 
   }
 
@@ -163,6 +181,206 @@ class Visualization {
   init() {
     scene.add(dataPoints);
     pickingScene.add(pickingPoints);
+
+
+
+    if (params.data === 'Scatterplot') {
+      // Initialising the scatterplot
+      this.createScatterplotVisualization();
+    } else if (params.data === 'Terrainmap') {
+      // Initialising the terrainmap
+      this.createTerrainMapVisualization();
+    } else if (params.data === 'Barchart') {
+      // Initialising the barchart
+      this.createBarChartVisualization();
+    }
+  }
+
+
+
+  handleNewVisualization() {
+    // remove old data from scene and picking scene
+    dataPoints.children = [];
+    pickingPoints.children = [];
+    scene.remove(xAxis, yAxis, zAxis, xLabel, yLabel, zLabel, xValueLower, xValueUpper, yValueLower, yValueUpper, zValueLower, zValueUpper);
+
+    // Reconstruct the new visualisation
+    if (params.data === 'Scatterplot') {
+      // Initialising the scatterplot
+      this.createScatterplotVisualization();
+    } else if (params.data === 'Terrainmap') {
+      // Initialising the terrainmap
+      this.createTerrainMapVisualization();
+    } else if (params.data === 'Barchart') {
+      // Initialising the barchart
+      this.createBarChartVisualization();
+    }
+  }
+
+
+
+  createBarChartVisualization() {
+
+    let models = [70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82];
+    let cylinders = [3, 4, 5, 6, 8];
+
+
+    let finalData = new Array(models.length);
+    for (let i = 0; i < finalData.length; i++) {
+      finalData[i] = new Array(cylinders.length);
+      finalData[i].fill(0);
+
+    }
+
+    for (let i = 0; i < cars.length; i++) {
+      let model, cylinder = 0;
+      let car = cars[i];
+      for (let j = 0; j < finalData.length; j++) {
+        if (car.Model == models[j]) {
+          model = j;
+        }
+      }
+      for (let k = 0; k < cylinders.length; k++) {
+        if (car.Cylinders == cylinders[k] && car.Origin != "Asia") {
+          cylinder = k;
+        }
+      }
+
+      finalData[model][cylinder] += 1;
+    }
+
+    console.log(finalData);
+
+
+    let id = 1;
+    for (let row = 0; row < finalData.length; row++) {
+      for (let col = 0; col < finalData[0].length; col++) {
+        let height = finalData[row][col];
+        height = this.map_range(height, 0, 28, 0, 1);
+        let heightSegments = Math.ceil(height * 4);
+
+        let markColor = new THREE.Color(colorScale[col]);
+        let position = new THREE.Vector3(col / 7, 0 - params.heightModifier, row / 7)
+        let geometry = new THREE.BoxGeometry(0.1, height, 0.1, 2, heightSegments, 2);
+        let material = new THREE.MeshPhongMaterial({ color: "silver", wireframe: false, flatShading: true, userData: { oldColor: markColor }, vertexColors: true });
+        material.userData.originalColor = markColor;
+
+
+        let box = new THREE.Mesh(geometry, material);
+
+
+
+        facesAttentionStore[id] = new Array(geometry.attributes.position.count * 2); // TODO: find the optimal size for this array! 
+        facesAttentionStore[id].fill(0);
+        objectAttentionStore[id] = 0;
+        tempObjectAttentionStore[id] = 50;
+
+
+        box.name = id;
+        id++;
+        box.position.set(position.x, (height / 2) - params.heightModifier, position.z);
+
+        let pickingBox = this.createBoxBuffer(geometry, box);
+        let pickingMesh = new THREE.Mesh(pickingBox, pickingMaterial);
+        pickingMesh.name = id;
+
+        box.geometry = box.geometry.toNonIndexed();
+        this.applyVertexColors(box.geometry, new THREE.Color(markColor)); // markColor
+
+        dataPoints.add(box);
+        pickingPoints.add(pickingMesh);
+      }
+
+    }
+
+
+    // Draw axes for the visualisation
+    const geometryX = new THREE.BufferGeometry();
+    geometryX.setFromPoints([new THREE.Vector3(-0.1, 0 - params.heightModifier, -0.1), new THREE.Vector3(0.68, 0 - params.heightModifier, -0.1)]);
+    xAxis = new THREE.Line(geometryX, new THREE.LineBasicMaterial());
+    scene.add(xAxis);
+
+    const geometryY = new THREE.BufferGeometry();
+    geometryY.setFromPoints([new THREE.Vector3(-0.1, 0 - params.heightModifier, -0.1), new THREE.Vector3(-0.1, 1 - params.heightModifier, -0.1)]);
+    yAxis = new THREE.Line(geometryY, new THREE.LineBasicMaterial());
+    scene.add(yAxis);
+
+    const geometryZ = new THREE.BufferGeometry();
+    geometryZ.setFromPoints([new THREE.Vector3(-0.1, 0 - params.heightModifier, -0.1), new THREE.Vector3(-0.1, 0 - params.heightModifier, 1.8)]);
+    zAxis = new THREE.Line(geometryZ, new THREE.LineBasicMaterial());
+    scene.add(zAxis);
+
+
+    // Draw labels on the axes 
+    xLabel = makeTextSprite("Cylinders", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xLabel.center = new THREE.Vector2(0.2, 0.5);
+    xLabel.position.set(0.35, 0 - params.heightModifier, -0.2);
+    scene.add(xLabel);
+
+    xValueUpper = makeTextSprite("3", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueUpper.center = new THREE.Vector2(0, 0.5);
+    xValueUpper.position.set(0, -0.1 - params.heightModifier, -0.15);
+    scene.add(xValueUpper);
+
+    xValueLower = makeTextSprite("8", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueLower.center = new THREE.Vector2(0, 0.5);
+    xValueLower.position.set(0.6, -0.1 - params.heightModifier, -0.15);
+    scene.add(xValueLower);
+
+
+    zLabel = makeTextSprite("Model Year", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zLabel.center = new THREE.Vector2(0.2, 0.5);
+    zLabel.position.set(-0.2, 0 - params.heightModifier, 1);
+    scene.add(zLabel);
+
+    zValueLower = makeTextSprite("1970", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueLower.center = new THREE.Vector2(0.1, 0.5);
+    zValueLower.position.set(-0.2, -0.1 - params.heightModifier, -0);
+    scene.add(zValueLower);
+
+    zValueUpper = makeTextSprite("1982", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueUpper.center = new THREE.Vector2(0.1, 0.5);
+    zValueUpper.position.set(-0.2, -0.1 - params.heightModifier, 1.75);
+    scene.add(zValueUpper);
+
+
+    yLabel = makeTextSprite("No. cars", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yLabel.center = new THREE.Vector2(0.2, 0.5);
+    yLabel.position.set(-0.2, 0.5 - params.heightModifier, -0.2);
+    scene.add(yLabel);
+
+    yValueLower = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueLower.center = new THREE.Vector2(0, 0.5);
+    yValueLower.position.set(-0.2, -0.1 - params.heightModifier, -0.2);
+    scene.add(yValueLower);
+
+    yValueUpper = makeTextSprite("28", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueUpper.center = new THREE.Vector2(0, 0.5);
+    yValueUpper.position.set(-0.2, 0.9 - params.heightModifier, -0.2);
+    scene.add(yValueUpper);
+  }
+
+  /**
+   * 
+   * @param {THREE.BoxGeometry} geometry The geometry who's attributes to copy
+   * @param {THREE.Mesh} mesh The mesh who's position and ID to copy
+   * @returns THREE.BoxGeometry constructed from the input geometry and mesh
+   */
+  createBoxBuffer(geometry, mesh) {
+    var buffer = new THREE.BoxGeometry(geometry.parameters.width, geometry.parameters.height, geometry.parameters.depth, geometry.parameters.widthSegments, geometry.parameters.heightSegments, geometry.parameters.depthSegments).toNonIndexed();; // SphereBufferGeometry
+    quaternion.setFromEuler(mesh.rotation);
+    matrix.compose(mesh.position, quaternion, mesh.scale);
+    buffer.applyMatrix4(matrix);
+    buffer.name = mesh.name;
+    this.applyUniqueVertexColors(buffer, buffer.name); // , color.setHex(mesh.name));
+
+    return buffer;
+  }
+
+
+
+
+  createScatterplotVisualization() {
 
     // TODO nice way for the user to choose this, rather than being hardcoded 
     var xAttr = Object.keys(iris[0])[0] // iris.sepalLength; 
@@ -181,16 +399,22 @@ class Visualization {
       };
     }
     let speciesList = Object.values(tempResult);
-    // console.log(speciesList.length);
+    console.log(speciesList);
 
     let xAttrMax = Math.max.apply(null, iris.map(function (o) { return o.sepalLength }));
     let xAttrMin = Math.min.apply(null, iris.map(function (o) { return o.sepalLength }));
 
+    console.log(xAttrMin, xAttrMax)
+
     let yAttrMax = Math.max.apply(null, iris.map(function (o) { return o.sepalWidth }));
     let yAttrMin = Math.min.apply(null, iris.map(function (o) { return o.sepalWidth }));
 
+    console.log(yAttrMin, yAttrMax)
+
     let zAttrMax = Math.max.apply(null, iris.map(function (o) { return o.petalWidth }));
     let zAttrMin = Math.min.apply(null, iris.map(function (o) { return o.petalWidth }));
+
+    console.log(zAttrMin, zAttrMax)
 
     for (let index = 0; index < iris.length; index++) {
 
@@ -210,22 +434,231 @@ class Visualization {
       } else { color = colorScale[3] }
 
       // Map the data to a specific plot area 
-      let xVal = this.map_range(element.sepalLength, xAttrMin, xAttrMax, -25, 25);
-      let yVal = this.map_range(element.sepalWidth, yAttrMin, yAttrMax, -25, 25);
-      let zVal = this.map_range(element.petalWidth, zAttrMin, zAttrMax, -25, 25);
+      let xVal = this.map_range(element.sepalLength, xAttrMin, xAttrMax, 0, 2);
+      let yVal = this.map_range(element.sepalWidth, yAttrMin, yAttrMax, 0, 1.5) - params.heightModifier;
+      let zVal = this.map_range(element.petalWidth, zAttrMin, zAttrMax, 0, 2);
 
       // TODO: Nice way to bind data-dimensions to scene dimensions (X,Y,Z), and to mark-attributes (size, height/width/thickness, colour, orientation) depending on the type of mark. 
       // TODO: Normalise input data to a desired, configurable size of the visualization. 
-      this.createSphere(index + 1, color, new THREE.Vector3(xVal, yVal, zVal), 0.5);
+      this.createSphere(index + 1, color, new THREE.Vector3(xVal, yVal, zVal), 0.03);
 
     } // for
+
+
+    // Draw axes for the visualisation
+    const geometryX = new THREE.BufferGeometry();
+    geometryX.setFromPoints([new THREE.Vector3(0, 0 - params.heightModifier, 2), new THREE.Vector3(2, 0 - params.heightModifier, 2)]);
+    xAxis = new THREE.Line(geometryX, new THREE.LineBasicMaterial());
+    scene.add(xAxis);
+
+    const geometryY = new THREE.BufferGeometry();
+    geometryY.setFromPoints([new THREE.Vector3(0, 0 - params.heightModifier, 2), new THREE.Vector3(0, 1.5 - params.heightModifier, 2)]);
+    yAxis = new THREE.Line(geometryY, new THREE.LineBasicMaterial());
+    scene.add(yAxis);
+
+    const geometryZ = new THREE.BufferGeometry();
+    geometryZ.setFromPoints([new THREE.Vector3(0, 0 - params.heightModifier, 0), new THREE.Vector3(0, 0 - params.heightModifier, 2)]);
+    zAxis = new THREE.Line(geometryZ, new THREE.LineBasicMaterial());
+    scene.add(zAxis);
+
+    // Draw labels on the axes 
+    xLabel = makeTextSprite("Sepal Length", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xLabel.center = new THREE.Vector2(0.2, 0.5);
+    xLabel.position.set(1, -0.1 - params.heightModifier, 2.1);
+    scene.add(xLabel);
+
+    xValueUpper = makeTextSprite("4.3", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueUpper.center = new THREE.Vector2(0, 0.5);
+    xValueUpper.position.set(0, -0.1 - params.heightModifier, 2.1);
+    scene.add(xValueUpper);
+
+    xValueLower = makeTextSprite("7.9", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueLower.center = new THREE.Vector2(0, 0.5);
+    xValueLower.position.set(2, -0.1 - params.heightModifier, 2.1);
+    scene.add(xValueLower);
+
+
+    zLabel = makeTextSprite("Petal Width", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zLabel.center = new THREE.Vector2(0.2, 0.5);
+    zLabel.position.set(-0.1, -0.1 - params.heightModifier, 1);
+    scene.add(zLabel);
+
+    zValueLower = makeTextSprite("0.1", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueLower.center = new THREE.Vector2(0, 0.5);
+    zValueLower.position.set(-0.2, -0.1 - params.heightModifier, -0);
+    scene.add(zValueLower);
+
+    zValueUpper = makeTextSprite("2.5", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueUpper.center = new THREE.Vector2(0, 0.5);
+    zValueUpper.position.set(-0.2, -0.1 - params.heightModifier, 2);
+    scene.add(zValueUpper);
+
+
+    yLabel = makeTextSprite("Sepal Width", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yLabel.center = new THREE.Vector2(0.2, 0.5);
+    yLabel.position.set(-0.1, 0.5 - params.heightModifier, 2.1);
+    scene.add(yLabel);
+
+    yValueLower = makeTextSprite("2", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueLower.center = new THREE.Vector2(0, 0.5);
+    yValueLower.position.set(-0.1, 0.01 - params.heightModifier, 2.1);
+    scene.add(yValueLower);
+
+    yValueUpper = makeTextSprite("4.4", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueUpper.center = new THREE.Vector2(0, 0.5);
+    yValueUpper.position.set(-0.1, 1.4 - params.heightModifier, 2.1);
+    scene.add(yValueUpper);
+
+  }
+
+
+
+  createTerrainMapVisualization() {
+    this.createTerrainMap(1, colorScale[3], new THREE.Vector3(1, 0 - params.heightModifier, 1), 1);
+
+    // Draw axes for the visualisation
+    const geometryX = new THREE.BufferGeometry();
+    geometryX.setFromPoints([new THREE.Vector3(0.45, 0 - params.heightModifier, 0.45), new THREE.Vector3(1.55, 0 - params.heightModifier, 0.45)]);
+    xAxis = new THREE.Line(geometryX, new THREE.LineBasicMaterial());
+    scene.add(xAxis);
+
+    const geometryY = new THREE.BufferGeometry();
+    geometryY.setFromPoints([new THREE.Vector3(0.45, 0 - params.heightModifier, 0.45), new THREE.Vector3(0.45, 0.35 - params.heightModifier, 0.45)]);
+    yAxis = new THREE.Line(geometryY, new THREE.LineBasicMaterial());
+    scene.add(yAxis);
+
+    const geometryZ = new THREE.BufferGeometry();
+    geometryZ.setFromPoints([new THREE.Vector3(0.45, 0 - params.heightModifier, 0.45), new THREE.Vector3(0.45, 0 - params.heightModifier, 1.55)]);
+    zAxis = new THREE.Line(geometryZ, new THREE.LineBasicMaterial());
+    scene.add(zAxis);
+
+
+
+    // Draw labels on the axes 
+    xLabel = makeTextSprite("Lattitude", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xLabel.center = new THREE.Vector2(0.2, 0.5);
+    xLabel.position.set(1, 0 - params.heightModifier, 0.4);
+    scene.add(xLabel);
+
+    xValueUpper = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueUpper.center = new THREE.Vector2(0, 0.5);
+    xValueUpper.position.set(0.5, -0.1 - params.heightModifier, 0.4);
+    scene.add(xValueUpper);
+
+    xValueLower = makeTextSprite("100", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    xValueLower.center = new THREE.Vector2(0, 0.5);
+    xValueLower.position.set(1.5, -0.1 - params.heightModifier, 0.4);
+    scene.add(xValueLower);
+
+
+    zLabel = makeTextSprite("Longitude", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zLabel.center = new THREE.Vector2(0.2, 0.5);
+    zLabel.position.set(0.4, 0 - params.heightModifier, 1);
+    scene.add(zLabel);
+
+    zValueLower = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueLower.center = new THREE.Vector2(0.1, 0.5);
+    zValueLower.position.set(0.4, -0.1 - params.heightModifier, 0.5);
+    scene.add(zValueLower);
+
+    zValueUpper = makeTextSprite("100", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    zValueUpper.center = new THREE.Vector2(0.1, 0.5);
+    zValueUpper.position.set(0.4, -0.1 - params.heightModifier, 1.5);
+    scene.add(zValueUpper);
+
+
+    yLabel = makeTextSprite("Elevation", { fontsize: 32, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yLabel.center = new THREE.Vector2(0.2, 0.5);
+    yLabel.position.set(0.4, 0.125 - params.heightModifier, 0.4);
+    scene.add(yLabel);
+
+    yValueLower = makeTextSprite("0", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueLower.center = new THREE.Vector2(0, 0.5);
+    yValueLower.position.set(0.4, -0.1 - params.heightModifier, 0.4);
+    scene.add(yValueLower);
+
+    yValueUpper = makeTextSprite("300", { fontsize: 16, textColor: { r: 255, g: 255, b: 255, a: 0 }, borderColor: { r: 255, g: 0, b: 255, a: 1.0 } });
+    yValueUpper.center = new THREE.Vector2(0, 0.5);
+    yValueUpper.position.set(0.4, 0.25 - params.heightModifier, 0.4);
+    scene.add(yValueUpper);
+  }
+
+
+
+  makeGUI(visualization) {
+    gui = new GUI({ container: document.getElementById('gui') });
+    gui.add(params, 'data', ['Scatterplot', 'Terrainmap', 'Barchart']).onFinishChange(() => this.handleNewVisualization());
+    const areaPick = gui.add(params, 'areaPickSize', 11, 501, 10);
+    areaPick.name("Size of gaze area (px Ø)")
+    areaPick.onFinishChange(function (v) {
+      console.log('The picking size is now ' + v);
+      params.areaPickSize = v;
+      viz.calculatePickingArea(); // calculatePickingArea(); 
+    });
+
+    const expSettings = gui.addFolder('Experiment Settings');
+    expSettings.add(params, 'Start').name("Start data collection");
+    expSettings.add(params, 'Stop').name("Stop data collection");
+    expSettings.add(params, 'Show_Results').name("Show cumulative attention");
+    expSettings.add(params, 'Reset').name("Reset/discard collected data");
+    expSettings.add(params, "liveUpdate").name("Show realtime cumulative attention").onFinishChange(value => {
+      this.toggleLiveUpdate(value);
+    });
+    expSettings.add(params, "allowDeemphasis").name("Allow deemphasis of points").onChange(value => {
+      visualization.toggleDeemphasis(value);
+    });
+    expSettings.add(params, "allowEmphasis").name("Allow emphasis of points").onChange(value => {
+      visualization.toggleEmphasis(value);
+    });
+    expSettings.add(params, 'resetColors').name("Reset colours of the visualization");
+
+
+
+    const attentionSettings = gui.addFolder('Attention Model Settings');
+    attentionSettings.add(params, 'deemphasizeThreshold', 60, 100, 5).name("Deemphasis threshold");
+    attentionSettings.add(params, 'emphasizeThreshold', 0, 40, 5).name("Emphasis threshold");
+    attentionSettings.add(params, 'attentionIntervalMS', 10, 1000, 100).name("Attention update (MS)");
+    attentionSettings.add(params, 'recolorIntervalMS', 10, 1000, 100).name("Recolouring update (MS)");
+    attentionSettings.add(params, 'decayRate', 100, 5000, 500).name("Attention decay (MS)");
+
+    attentionSettings.close();
+
+    gui.open();
+    gui.domElement.style.visibility = 'visible';
+
+    // group = new InteractiveGroup(renderer, camera);
+    // // scene.add(group);
+
+    // const mesh = new HTMLMesh(gui.domElement);
+    // mesh.position.x = -0.75;
+    // mesh.position.y = 0;
+    // mesh.position.z = -0.5;
+    // mesh.rotation.y = Math.PI / 4;
+    // // mesh.scale.setScalar( 2 );
+    // group.add(mesh);
+
+    stats = new Stats();
+    // vizContainer.appendChild(stats.dom);
+    stats.dom.style.width = '80px';
+    stats.dom.style.height = '48px';
+
+    // const statsMesh = new HTMLMesh(stats.dom);
+    // statsMesh.position.x = - 0.75;
+    // statsMesh.position.y = 0.5;
+    // statsMesh.position.z = - 0.6;
+    // statsMesh.rotation.y = Math.PI / 4;
+    // // statsMesh.scale.setScalar( 2.5 );
+    // group.add(statsMesh);
   }
 
 
   start() {
     this.init();
+    this.makeGUI(viz);
     this.render();
     this.animate();
+    //this.toggleLiveUpdate();
+    this.startExperiment(); // autostart the experiment, TODO should this only get called when the user enters immersive mode?? - To test 
   }
 
 
@@ -236,12 +669,8 @@ class Visualization {
 
   render() {
     // draw a single frame
-    renderer.setViewport(0, 0, renderer.domElement?.offsetWidth, renderer.domElement?.offsetHeight);
     renderer.render(scene, camera);
-    renderer.autoClear = false;
-    viewHelper.render(renderer);
-    renderer.autoClear = true;
-    TWEEN.update();
+    // stats.update();
   }
 
 
@@ -252,19 +681,18 @@ class Visualization {
       screenBuffer = this.checkForOcclusion();
       this.checkFrustum();
 
-      stats.update();
 
       // We only use attention aware strategies if the experiment is running and we are not currently live-showing the cumulative attention 
-      if (experimentStarted && !liveUpdate) {
+      if (params.experimentStarted && !params.liveUpdate && !params.experimentPaused) {
         // console.log(tempObjectAttentionStore);
         for (const element of dataPoints.children) {
-          
-          if (this.params.allowDeemphasis && tempObjectAttentionStore[element.name] > deemphasizeThreshold) { // check if point needs to be deemphasised
+
+          if (params.allowDeemphasis && tempObjectAttentionStore[element.name] > deemphasizeThreshold) { // check if point needs to be deemphasised
             triggeredStore[element.name] = true;
             // deemphasizing 
             element.material.color.lerp(new THREE.Color("#555555"), 0.05);
-            
-          } else if (this.params.allowEmphasis && tempObjectAttentionStore[element.name] < emphasizeThreshold) { // check if point needs to be emphasised 
+
+          } else if (params.allowEmphasis && tempObjectAttentionStore[element.name] < emphasizeThreshold) { // check if point needs to be emphasised 
 
             triggeredStore[element.name] = true;
             // emphasize
@@ -278,7 +706,7 @@ class Visualization {
 
               tempObjectAttentionStore[element.name] = 50; // return to baseline 
               triggeredStore[element.name] = false; // Set the point to be not currently emphasised or deemphasised
-            
+
             }
 
             // restore to baseline 
@@ -302,6 +730,11 @@ class Visualization {
     camera.updateProjectionMatrix();
 
     renderer.setSize(window.innerWidth, window.innerHeight);
+
+    width = window.innerWidth;
+    height = window.innerHeight;
+
+    pickingTextureOcclusion = new THREE.WebGLRenderTarget(width, height);
 
   }
 
@@ -367,6 +800,100 @@ class Visualization {
   }
 
 
+
+  /**
+   * 
+   * @param {*} id 
+   * @param {*} markColor 
+   * @param {*} position 
+   * @param {*} size 
+   */
+  createTerrainMap(id, markColor, position, size) {
+    let geometry = new THREE.PlaneGeometry(size, size, 24, 23);
+    geometry.rotateX(-Math.PI * 0.5); // rotating the geometry to be vertical
+    let material = new THREE.MeshPhongMaterial({ color: markColor, side: THREE.DoubleSide, wireframe: false, flatShading: true, userData: { oldColor: markColor }, vertexColors: true });
+
+    material.userData.originalColor = markColor;
+    let plane = new THREE.Mesh(geometry, material);
+    facesAttentionStore[id] = new Array(geometry.attributes.position.count * 3); // TODO: find the optimal size for this array! 
+    facesAttentionStore[id].fill(0);
+    objectAttentionStore[id] = 0;
+    tempObjectAttentionStore[id] = 50;
+
+
+    plane.name = id;
+    plane.position.set(position.x, position.y, position.z);
+
+    let row = 0;
+    let col = 0;
+    for (let i = 1; i < plane.geometry.attributes.position.array.length; i += 3) {
+      let val = (elevation[col][row]);
+      val = this.map_range(val, 0, 300, 0, 0.25);
+      plane.geometry.attributes.position.array[i] = val;
+      col++;
+      if (col > 24) {
+        col = 0;
+        row++;
+      }
+    }
+
+    this.createTerrainMapBuffer(id, position, size);
+    // let pickingTerrainMap = this.createTerrainMapBuffer(geometry, plane);
+    // let pickingMesh = new THREE.Mesh(pickingTerrainMap, pickingMaterial);
+    // pickingMesh.name = id;
+
+    plane.geometry = plane.geometry.toNonIndexed();
+    // sphere.material.vertexColors = true;
+    this.applyVertexColors(plane.geometry, new THREE.Color(markColor)); // markColor
+    // sphere.material.needsUpdate;
+
+    dataPoints.add(plane);
+    // pickingPoints.add(pickingMesh);
+    // return { plane, pickingMesh };
+  }
+
+
+  /**
+   * 
+   * @param {THREE.SphereGeometry} geometry The geometry who's attributes to copy
+   * @param {THREE.Mesh} mesh The mesh who's position and ID to copy
+   * @returns THREE.SphereGeometry constructed from the input geometry and mesh
+   */
+  createTerrainMapBuffer(id, position, size) {
+    let geometry = new THREE.PlaneGeometry(size, size, 24, 23);
+    geometry.rotateX(-Math.PI * 0.5); // rotating the geometry to be vertical
+    // let material = new THREE.MeshPhongMaterial({side: THREE.DoubleSide, wireframe: false, flatShading: true, vertexColors: true });
+
+    // let plane = new THREE.Mesh(geometry, material);
+
+    geometry.name = id;
+
+
+    // let pickingTerrainMap = this.createTerrainMapBuffer(geometry, plane);
+    let pickingMesh = new THREE.Mesh(geometry, pickingMaterial);
+    pickingMesh.name = id;
+    pickingMesh.position.set(position.x, position.y, position.z);
+
+    let row = 0;
+    let col = 0;
+    for (let i = 1; i < geometry.attributes.position.array.length; i += 3) {
+      let val = (elevation[col][row]);
+      val = this.map_range(val, 0, 300, 0, 0.25);
+      geometry.attributes.position.array[i] = val;
+      col++;
+      if (col > 24) {
+        col = 0;
+        row++;
+      }
+    }
+
+    pickingMesh.geometry = pickingMesh.geometry.toNonIndexed();
+    this.applyUniqueVertexColors(pickingMesh.geometry, geometry.name); // , color.setHex(mesh.name));
+    pickingPoints.add(pickingMesh);
+    // return buffer;
+  }
+
+
   /**
    * Recolors the object in the specified color
    * @param {THREE.BufferGeometry} geometry The geometry in the scene to recolor
@@ -406,6 +933,7 @@ class Visualization {
       Color needs to be converted from Linear to SRGB because reasons 
       (if not the color will be wrong for all but primary (e.g. R=1,B=0,G=0) and secondary (e.g. R=1,B=1,G=0) colors!)
       */
+
       color.convertLinearToSRGB();
       colors.push(color.r, color.g, color.b);
       colors.push(color.r, color.g, color.b);
@@ -433,12 +961,15 @@ class Visualization {
    * @returns buffer of the entire screen. Each value is the colour of the pixel as a hex-value. 
    */
   checkForOcclusion() {
+    var hexBuffer;
+    var viewPortWidth = 2100;
+    var viewPortHeight = 1800;
     renderer.setRenderTarget(pickingTextureOcclusion);
     renderer.render(pickingScene, camera);
     var pixelBuffer = new Uint8Array(width * height * 4);
-    renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, width, height, pixelBuffer);
+    renderer.readRenderTargetPixels(pickingTextureOcclusion, 0, 0, width, height, pixelBuffer); // width, height 
     renderer.setRenderTarget(null);
-    var hexBuffer = this.rgbaToHex(pixelBuffer);
+    hexBuffer = this.rgbaToHex(pixelBuffer);
 
     // dataPoints.children.forEach(element => {
     //   if (hexBuffer.includes(element.name)) {
@@ -450,8 +981,30 @@ class Visualization {
 
 
   isHoveringAreaBuffer(buffer) {
-    let subBuffer = this.findAreaFromArray(buffer, this.params.areaPickSize, mousePick.x, mousePick.y);
+    let subBuffer;
+    subBuffer = this.findAreaFromArray(buffer, width, height, params.areaPickSize, mousePick.x, mousePick.y); // quest 3 res: 1680x1760 // 1000 works well for width!! 
+
     return subBuffer;
+  }
+
+
+  isHoveringAreaBufferStandalone() {
+    camera.setViewOffset(renderer.domElement.width,
+      renderer.domElement.height,
+      renderer.domElement.width / 2 - (this.params.areaPickSize / 2) | 0,
+      0,
+      // mousePick.x * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
+      // mousePick.y * window.devicePixelRatio - (this.params.areaPickSize / 2) | 0, 
+      this.params.areaPickSize,
+      this.params.areaPickSize);
+    renderer.setRenderTarget(pickingTextureAreaHover);
+    renderer.render(pickingScene, camera);
+    camera.clearViewOffset();
+    var pixelBuffer = new Uint8Array(this.params.areaPickSize * this.params.areaPickSize * 4);
+    renderer.readRenderTargetPixels(pickingTextureAreaHover, 0, 0, this.params.areaPickSize, this.params.areaPickSize, pixelBuffer);
+    var hexBuffer = this.rgbaToHex(pixelBuffer);
+    renderer.setRenderTarget(null);
+    return hexBuffer;
   }
 
 
@@ -534,18 +1087,24 @@ class Visualization {
   }
 
 
-  findAreaFromArray(array, squareSize, xCor, yCor) {
-    yCor = Math.abs(yCor - height); // reversing the Y-coordinate
+  findAreaFromArray(array, arrayWidth, arrayHeight, squareSize, xCor, yCor) {
+    yCor = Math.abs(yCor - (arrayHeight)); // reversing the Y-coordinate
+    // if (arrayWidth * arrayHeight != array.length) {
+    //   alert("Something's up!");
+    // }
+
+    if (yCor < 0) yCor = 0;
+    if (xCor < 0) xCor = 0;
     let row = 0;
     let column = 0;
-    let startRow = Math.ceil(yCor - squareSize / 2);
-    startRow = startRow < 0 ? 0 : startRow;
-    let endRow = Math.floor(yCor + squareSize / 2);
-    endRow = endRow > height ? height : endRow;
-    let startCol = Math.ceil(xCor - squareSize / 2);
-    startCol = startCol < 0 ? 0 : startCol;
-    let endCol = Math.floor(xCor + squareSize / 2);
-    endCol = endCol > width ? width : endCol;
+    let startRow = Math.ceil((yCor) - squareSize / 2);
+    if (startRow < 0) startRow = 0; // startRow = startRow < 0 ? 0 : startRow;
+    let endRow = Math.floor((yCor) + squareSize / 2);
+    if (endRow > arrayHeight) endRow = arrayHeight;// endRow = endRow > ArrayHeight ? ArrayHeight : endRow;
+    let startCol = Math.ceil((xCor) - squareSize / 2);
+    if (startCol < 0) startCol = 0; // startCol = startCol < 0 ? 0 : startCol;
+    let endCol = Math.floor((xCor) + squareSize / 2);
+    if (endCol > arrayWidth) endCol = arrayWidth; // endCol = endCol > arrayWidth ? arrayWidth : endCol;
     let subArray = []
 
     for (let index = 0; index < array.length; index++) {
@@ -553,7 +1112,7 @@ class Visualization {
         subArray.push(array[index]);
       }
       column++;
-      if (column >= width) {
+      if (column > arrayWidth - 1) {
         column = 0;
         row++;
       }
@@ -627,10 +1186,10 @@ class Visualization {
 
 
   calculatePickingArea() {
-    this.centerRow = Math.floor((this.params.areaPickSize) / 2);
-    this.centerColumn = Math.floor((this.params.areaPickSize) / 2);
-    pickingTextureAreaHover = new THREE.WebGLRenderTarget(this.params.areaPickSize, this.params.areaPickSize);
-    console.log("The Viz' picking area is now ", this.params.areaPickSize);
+    this.centerRow = Math.floor((params.areaPickSize) / 2);
+    this.centerColumn = Math.floor((params.areaPickSize) / 2);
+    pickingTextureAreaHover = new THREE.WebGLRenderTarget(params.areaPickSize, params.areaPickSize);
+    console.log("The Viz' picking area is now ", params.areaPickSize);
   }
 
 
@@ -644,7 +1203,7 @@ class Visualization {
         tempBuffer.push(buffer[i]);
       }
       col++;
-      if (col >= this.params.areaPickSize) {
+      if (col >= params.areaPickSize) {
         col = 0;
         row++;
       }
@@ -803,6 +1362,48 @@ class Visualization {
   }
 
 
+
+  emphasiseLeastSeenObjects(numberOfObjects) {
+    let attentionStore = objectAttentionStore.toSorted();
+    let objectsToBeEmphasised = attentionStore.slice(numberOfObjects - 1);
+
+    dataPoints.children.forEach(element => {
+      if (objectsToBeEmphasised.includes(element.name)) {
+        this.applyVertexColors(element.geometry, new THREE.Color('orange'));
+      }
+
+    });
+
+    // let attentionStore = objectAttentionStore;
+    // attentionStore.sort();
+    // let objectsToBeEmphasised = attentionStore.slice(numberOfObjects - 1);
+    // dataPoints.children.array.forEach(element => {
+    //   for (let index = 0; index < objectsToBeEmphasised.length; index++) {
+    //     if (element.name === objectsToBeEmphasised[index]) {
+    //       // object must be recolored
+    //       this.applyVertexColors(element.geometry, new THREE.Color('orange'));
+    //     }
+
+    //   }
+    // });
+  }
+
+
+
+  deemphasiseMostSeenObjects(numberOfObjects) {
+    let attentionStore = objectAttentionStore.toSorted();
+    attentionStore.reverse();
+    let objectsToBeDeemphasised = attentionStore.slice(numberOfObjects - 1);
+    dataPoints.children.forEach(element => {
+      if (objectsToBeDeemphasised.includes(element.name)) {
+        element.material.color = new THREE.Color("#555555");
+      }
+
+    });
+  }
+
+
+
   findUnderAttendedObjects() {
     let underAttended = new Array();
     for (let i = 1; i <= tempObjectAttentionStore.length; i++) {
@@ -939,23 +1540,30 @@ class Visualization {
 
   startExperiment() {
     // this.resetAttentionToAllPoints();
-    console.log("Data collection started!"); 
-    experimentStarted = true;
+    console.log("Data collection started!");
+    params.experimentStarted = true;
+
     attentionID = setInterval(() => {
-      let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
-      let circleBuffer = this.circleFromSquareBuffer(subBuffer);
-      this.addAttentionToFaces(circleBuffer);
-      this.increaseAttentionToPoint(circleBuffer);
-    }, attentionIntervalMS);
+      if (!experimentPaused) {
+        let subBuffer = this.isHoveringAreaBuffer(screenBuffer);
+        // let subBuffer = this.isHoveringAreaBufferStandalone(); 
+        let circleBuffer = this.circleFromSquareBuffer(subBuffer);
+        this.addAttentionToFaces(circleBuffer);
+        this.increaseAttentionToPoint(circleBuffer);
+      }
+    }, params.attentionIntervalMS);
+
     decayID = setInterval(() => {
-      this.decayTempAttention();
-    }, decayRate);
+      if (!experimentPaused) {
+        this.decayTempAttention();
+      }
+    }, params.decayRate);
   }
 
 
   stopExperiment() {
-    console.log("Data collection stopped!"); 
-    experimentStarted = false;
+    console.log("Data collection stopped!");
+    params.experimentStarted = false;
     clearInterval(attentionID);
     attentionID = null;
     clearInterval(decayID);
@@ -974,24 +1582,24 @@ class Visualization {
       this.applyVertexColors(element.geometry, color);
       this.recolorVerticesOnPoint(element);
     }
-    console.log("Showing cumulated attention on objects"); 
+    console.log("Showing cumulated attention on objects");
   }
 
   resetExperimentData() {
     this.resetAttentionToAllPoints();
     this.resetColorsOnAllPoints();
-    console.log("Collected data reset!"); 
+    console.log("Collected data reset!");
   }
 
 
   toggleLiveUpdate() {
-    if (liveUpdate) {
-      liveUpdate = false;
+    if (!params.liveUpdate) {
+      // liveUpdate = false;
       console.log("Live preview of cumulative attention turned off");
       clearInterval(reColorID);
       reColorID = null;
     } else {
-      liveUpdate = true;
+      // liveUpdate = true;
       console.log("Live preview of cumulative attention turned on");
       reColorID = setInterval(() => {
         dataPoints.children.forEach(element => {
@@ -1007,20 +1615,20 @@ class Visualization {
             this.recolorVerticesOnPoint(element);
           }
         });
-      }, recolorIntervalMS);
+      }, params.recolorIntervalMS);
     }
   }
 
 
   toggleDeemphasis() {
-    this.params.allowDeemphasis = !this.params.allowDeemphasis;
-    console.log("Deemphasizing is", this.params.allowDeemphasis); 
+    // params.allowDeemphasis = !params.allowDeemphasis;
+    console.log("Deemphasizing is", params.allowDeemphasis);
   }
 
 
   toggleEmphasis() {
-    this.params.allowEmphasis = !this.params.allowEmphasis;
-    console.log("Emphasizing is", this.params.allowEmphasis); 
+    // params.allowEmphasis = !params.allowEmphasis;
+    console.log("Emphasizing is", params.allowEmphasis);
   }
 }
 
@@ -1074,4 +1682,3 @@ function compareID(a, b) {
 
 
 export { Visualization };
-
